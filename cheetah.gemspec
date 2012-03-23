@@ -21,7 +21,7 @@ Gem::Specification.new do |s|
   s.files       = [
     "CHANGELOG",
     "LICENSE",
-    "README.md"
+    "README.md",
     "VERSION",
     "lib/cheetah.rb"
   ]
