@@ -80,21 +80,21 @@ describe Cheetah do
         it "raises an exception when the command is not found" do
           lambda {
             Cheetah.run("unknown", "foo", "bar", "baz")
-          }.should raise_exception(Cheetah::ExecutionFailed) do |e|
+          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.command.should          == "unknown"
             e.args.should             == ["foo", "bar", "baz"]
-            e.status.existatus.should == 127
-          end
+            e.status.exitstatus.should == 127
+          }
         end
 
         it "raises an exception when the command returns non-zero status" do
           lambda {
             Cheetah.run("/bin/false", "foo", "bar", "baz")
-          }.should raise_exception(Cheetah::ExecutionFailed) do |e|
-            e.command.should          == "unknown"
+          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
+            e.command.should          == "/bin/false"
             e.args.should             == ["foo", "bar", "baz"]
-            e.status.existatus.should == 1
-          end
+            e.status.exitstatus.should == 1
+          }
         end
       end
 
@@ -102,19 +102,19 @@ describe Cheetah do
         it "raises an exception with a correct message for a command without arguments" do
           lambda {
             Cheetah.run("/bin/false")
-          }.should raise_exception(Cheetah::ExecutionFailed) do |e|
+          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.message.should ==
-              "Execution of command \"false\" with no arguments failed with status 1."
-          end
+              "Execution of command \"/bin/false\" with no arguments failed with status 1."
+          }
         end
 
         it "raises an exception with a correct message for a command with arguments" do
           lambda {
-            Cheetah.run("/bin/false")
-          }.should raise_exception(Cheetah::ExecutionFailed) do |e|
+            Cheetah.run("/bin/false", "foo", "bar", "baz")
+          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.message.should ==
-              "Execution of command \"false\" with arguments \"foo\", \"bar\", \"baz\" failed with status 1."
-          end
+              "Execution of command \"/bin/false\" with arguments \"foo\", \"bar\", \"baz\" failed with status 1."
+          }
         end
       end
 
@@ -130,55 +130,55 @@ describe Cheetah do
         it "raises an exception with both stdout and stderr not set with no :capture option" do
           lambda {
             Cheetah.run(@command)
-          }.should raise_exception(Cheetah::ExecutionFailed) do |e|
+          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.stdout.should be_nil
             e.stderr.should be_nil
-          end
+          }
         end
 
         it "raises an exception with both stdout and stderr not set with :capture => nil" do
           lambda {
             Cheetah.run(@command, :capture => nil)
-          }.should raise_exception(Cheetah::ExecutionFailed) do |e|
+          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.stdout.should be_nil
             e.stderr.should be_nil
-          end
+          }
         end
 
         it "raises an exception with only stdout set with :capture => :stdout" do
           lambda {
             Cheetah.run(@command, :capture => :stdout)
-          }.should raise_exception(Cheetah::ExecutionFailed) do |e|
+          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.stdout.should == "output"
             e.stderr.should be_nil
-          end
+          }
         end
 
         it "raises an exception with only stderr set with :capture => :stderr" do
           lambda {
-            Cheetah.run(@command, :capture => :stdout)
-          }.should raise_exception(Cheetah::ExecutionFailed) do |e|
+            Cheetah.run(@command, :capture => :stderr)
+          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.stdout.should be_nil
-            e.stderr.should == "output"
-          end
+            e.stderr.should == "error"
+          }
         end
 
         it "raises an exception with both stdout and stderr set with :capture => [:stdout, :stderr]" do
           lambda {
             Cheetah.run(@command, :capture => [:stdout, :stderr])
-          }.should raise_exception(Cheetah::ExecutionFailed) do |e|
+          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.stdout.should == "output"
             e.stderr.should == "error"
-          end
+          }
         end
 
         it "handles commands that output nothing correctly" do
           lambda {
             Cheetah.run("/bin/false", :capture => [:stdout, :stderr])
-          }.should raise_exception(Cheetah::ExecutionFailed) do |e|
+          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.stdout.should == ""
             e.stderr.should == ""
-          end
+          }
         end
       end
     end
