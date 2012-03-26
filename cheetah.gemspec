@@ -26,6 +26,5 @@ Gem::Specification.new do |s|
     "lib/cheetah.rb"
   ]
 
-  s.add_development_dependency "shoulda-context"
-  s.add_development_dependency "mocha"
+  s.add_development_dependency "rspec"
 end
