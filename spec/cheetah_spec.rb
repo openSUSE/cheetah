@@ -131,8 +131,8 @@ describe Cheetah do
           lambda {
             Cheetah.run(@command)
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
-            e.stdout.should be_nil
-            e.stderr.should be_nil
+            e.stdout.should == "output"
+            e.stderr.should == "error"
           }
         end
 
@@ -140,8 +140,8 @@ describe Cheetah do
           lambda {
             Cheetah.run(@command, :capture => nil)
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
-            e.stdout.should be_nil
-            e.stderr.should be_nil
+            e.stdout.should == "output"
+            e.stderr.should == "error"
           }
         end
 
@@ -150,7 +150,7 @@ describe Cheetah do
             Cheetah.run(@command, :capture => :stdout)
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.stdout.should == "output"
-            e.stderr.should be_nil
+            e.stderr.should == "error"
           }
         end
 
@@ -158,7 +158,7 @@ describe Cheetah do
           lambda {
             Cheetah.run(@command, :capture => :stderr)
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
-            e.stdout.should be_nil
+            e.stdout.should == "output"
             e.stderr.should == "error"
           }
         end

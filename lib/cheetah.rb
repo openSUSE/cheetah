@@ -74,7 +74,6 @@ module Cheetah
   def self.run(command, *args)
     options = args.last.is_a?(Hash) ? args.pop : {}
 
-    capture = options[:capture]
     stdin   = options[:stdin] || ""
     logger  = options[:logger]
 
@@ -83,14 +82,9 @@ module Cheetah
       command = command.first
     end
 
-    pass_stdin = !stdin.empty?
-    pipe_stdin_read, pipe_stdin_write = pass_stdin ? IO.pipe : [nil, nil]
-
-    capture_stdout = [:stdout, [:stdout, :stderr]].include?(capture) || logger
-    pipe_stdout_read, pipe_stdout_write = capture_stdout ? IO.pipe : [nil, nil]
-
-    capture_stderr = [:stderr, [:stdout, :stderr]].include?(capture) || logger
-    pipe_stderr_read, pipe_stderr_write = capture_stderr ? IO.pipe : [nil, nil]
+    pipe_stdin_read,  pipe_stdin_write  = IO.pipe
+    pipe_stdout_read, pipe_stdout_write = IO.pipe
+    pipe_stderr_read, pipe_stderr_write = IO.pipe
 
     if logger
       logger.debug "Executing command #{command.inspect} with #{describe_args(args)}."
@@ -99,29 +93,17 @@ module Cheetah
 
     pid = fork do
       begin
-        if pass_stdin
-          pipe_stdin_write.close
-          STDIN.reopen(pipe_stdin_read)
-          pipe_stdin_read.close
-        else
-          STDIN.reopen("/dev/null", "r")
-        end
+        pipe_stdin_write.close
+        STDIN.reopen(pipe_stdin_read)
+        pipe_stdin_read.close
 
-        if capture_stdout
-          pipe_stdout_read.close
-          STDOUT.reopen(pipe_stdout_write)
-          pipe_stdout_write.close
-        else
-          STDOUT.reopen("/dev/null", "w")
-        end
+        pipe_stdout_read.close
+        STDOUT.reopen(pipe_stdout_write)
+        pipe_stdout_write.close
 
-        if capture_stderr
-          pipe_stderr_read.close
-          STDERR.reopen(pipe_stderr_write)
-          pipe_stderr_write.close
-        else
-          STDERR.reopen("/dev/null", "w")
-        end
+        pipe_stderr_read.close
+        STDERR.reopen(pipe_stderr_write)
+        pipe_stderr_write.close
 
         # All file descriptors from 3 above should be closed here, but since I
         # don't know about any way how to detect the maximum file descriptor
@@ -145,53 +127,48 @@ module Cheetah
     # deadlock.
     #
     # Similar issues can happen with standard input vs. one of the outputs.
-    if pass_stdin || capture_stdout || capture_stderr
-      stdout = ""
-      stderr = ""
+    stdout = ""
+    stderr = ""
+    loop do
+      pipes_readable = [pipe_stdout_read, pipe_stderr_read].compact.select { |p| !p.closed? }
+      pipes_writable = [pipe_stdin_write].compact.select { |p| !p.closed? }
 
-      loop do
-        pipes_readable = [pipe_stdout_read, pipe_stderr_read].compact.select { |p| !p.closed? }
-        pipes_writable = [pipe_stdin_write].compact.select { |p| !p.closed? }
+      break if pipes_readable.empty? && pipes_writable.empty?
 
-        break if pipes_readable.empty? && pipes_writable.empty?
+      ios_read, ios_write, ios_error = select(pipes_readable, pipes_writable,
+        pipes_readable + pipes_writable)
 
-        ios_read, ios_write, ios_error = select(pipes_readable, pipes_writable,
-          pipes_readable + pipes_writable)
+      if !ios_error.empty?
+        raise IOError, "Error when communicating with executed program."
+      end
 
-        if !ios_error.empty?
-          raise IOError, "Error when communicating with executed program."
+      if ios_read.include?(pipe_stdout_read)
+        begin
+          stdout += pipe_stdout_read.readpartial(4096)
+        rescue EOFError
+          pipe_stdout_read.close
         end
+      end
 
-        if ios_read.include?(pipe_stdout_read)
-          begin
-            stdout += pipe_stdout_read.readpartial(4096)
-          rescue EOFError
-            pipe_stdout_read.close
-          end
+      if ios_read.include?(pipe_stderr_read)
+        begin
+          stderr += pipe_stderr_read.readpartial(4096)
+        rescue EOFError
+          pipe_stderr_read.close
         end
+      end
 
-        if ios_read.include?(pipe_stderr_read)
-          begin
-            stderr += pipe_stderr_read.readpartial(4096)
-          rescue EOFError
-            pipe_stderr_read.close
-          end
-        end
-
-        if ios_write.include?(pipe_stdin_write)
-          n = pipe_stdin_write.syswrite(stdin)
-          stdin = stdin[n..-1]
-          pipe_stdin_write.close if stdin.empty?
-        end
+      if ios_write.include?(pipe_stdin_write)
+        n = pipe_stdin_write.syswrite(stdin)
+        stdin = stdin[n..-1]
+        pipe_stdin_write.close if stdin.empty?
       end
     end
 
     pid, status = Process.wait2(pid)
     begin
       if !status.success?
-        raise ExecutionFailed.new(command, args, status,
-          capture_stdout ? stdout : nil,
-          capture_stderr ? stderr : nil,
+        raise ExecutionFailed.new(command, args, status, stdout, stderr,
           "Execution of command #{command.inspect} " +
           "with #{describe_args(args)} " +
           "failed with status #{status.exitstatus}.")
@@ -204,7 +181,7 @@ module Cheetah
       end
     end
 
-    case capture
+    case options[:capture]
       when nil
         nil
       when :stdout
