@@ -119,9 +119,17 @@ describe Cheetah do
       end
 
       describe "capturing" do
+        before do
+          @command = create_command(<<-EOT)
+            echo -n 'output'
+            echo -n 'error' 1>&2
+            exit 1
+          EOT
+        end
+
         it "raises an exception with both stdout and stderr not set with no :capture option" do
           lambda {
-            Cheetah.run("/bin/false")
+            Cheetah.run(@command)
           }.should raise_exception(Cheetah::ExecutionFailed) do |e|
             e.stdout.should be_nil
             e.stderr.should be_nil
@@ -130,7 +138,7 @@ describe Cheetah do
 
         it "raises an exception with both stdout and stderr not set with :capture => nil" do
           lambda {
-            Cheetah.run("/bin/false", :capture => nil)
+            Cheetah.run(@command, :capture => nil)
           }.should raise_exception(Cheetah::ExecutionFailed) do |e|
             e.stdout.should be_nil
             e.stderr.should be_nil
@@ -138,9 +146,8 @@ describe Cheetah do
         end
 
         it "raises an exception with only stdout set with :capture => :stdout" do
-          command = create_command("echo -n 'output'; exit 1")
           lambda {
-            Cheetah.run(command, :capture => :stdout)
+            Cheetah.run(@command, :capture => :stdout)
           }.should raise_exception(Cheetah::ExecutionFailed) do |e|
             e.stdout.should == "output"
             e.stderr.should be_nil
@@ -148,9 +155,8 @@ describe Cheetah do
         end
 
         it "raises an exception with only stderr set with :capture => :stderr" do
-          command = create_command("echo -n 'output' 1>&2; exit 1")
           lambda {
-            Cheetah.run(command, :capture => :stdout)
+            Cheetah.run(@command, :capture => :stdout)
           }.should raise_exception(Cheetah::ExecutionFailed) do |e|
             e.stdout.should be_nil
             e.stderr.should == "output"
@@ -158,13 +164,8 @@ describe Cheetah do
         end
 
         it "raises an exception with both stdout and stderr set with :capture => [:stdout, :stderr]" do
-          command = create_command(<<-EOT)
-            echo -n 'output'
-            echo -n 'error' 1>&2
-            exit 1
-          EOT
           lambda {
-            Cheetah.run(command, :capture => [:stdout, :stderr])
+            Cheetah.run(@command, :capture => [:stdout, :stderr])
           }.should raise_exception(Cheetah::ExecutionFailed) do |e|
             e.stdout.should == "output"
             e.stderr.should == "error"
@@ -183,6 +184,13 @@ describe Cheetah do
     end
 
     describe "capturing" do
+      before do
+        @command = create_command(<<-EOT)
+          echo -n 'output'
+          echo -n 'error' 1>&2
+        EOT
+      end
+
       it "does not use standard output of the parent process with no :capture option" do
         # We just open a random file to get a file descriptor into which we can
         # save our stdout.
@@ -193,7 +201,7 @@ describe Cheetah do
 
         STDOUT.reopen(writer)
         begin
-          Cheetah.run("echo", "-n", "output")
+          Cheetah.run(@command)
         ensure
           STDOUT.reopen(saved_stdout)
           writer.close
@@ -213,8 +221,7 @@ describe Cheetah do
 
         STDERR.reopen(writer)
         begin
-          command = create_command("echo -n error 1>&2")
-          Cheetah.run(command)
+          Cheetah.run(@command)
         ensure
           STDERR.reopen(saved_stderr)
           writer.close
@@ -225,11 +232,11 @@ describe Cheetah do
       end
 
       it "returns nil with no :capture option" do
-        Cheetah.run("true").should be_nil
+        Cheetah.run(@command).should be_nil
       end
 
       it "returns nil with :capture => nil" do
-        Cheetah.run("true", :capture => nil).should be_nil
+        Cheetah.run(@command, :capture => nil).should be_nil
       end
 
       it "returns the standard output with :capture => :stdout" do
@@ -237,16 +244,11 @@ describe Cheetah do
       end
 
       it "returns the error output with :capture => :stderr" do
-        command = create_command("echo -n 'error' 1>&2")
-        Cheetah.run(command, :capture => :stderr).should == "error"
+        Cheetah.run(@command, :capture => :stderr).should == "error"
       end
 
       it "returns both outputs with :capture => [:stdout, :stderr]" do
-        command = create_command(<<-EOT)
-          echo -n 'output'
-          echo -n 'error' 1>&2
-        EOT
-        Cheetah.run(command, :capture => [:stdout, :stderr]).should == ["output", "error"]
+        Cheetah.run(@command, :capture => [:stdout, :stderr]).should == ["output", "error"]
       end
 
       it "handles commands that output nothing correctly" do
