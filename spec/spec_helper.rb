@@ -1,3 +1,5 @@
+require "logger"
+
 require "cheetah"
 
 RSpec.configure do |c|

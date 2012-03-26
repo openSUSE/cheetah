@@ -16,6 +16,18 @@ module Cheetah
     end
   end
 
+  # Returns the global logger or nil if none is set (the default). This logger
+  # is used by Cheetah#run unless overridden by the :logger option.
+  def self.logger
+    @@logger
+  end
+
+  # Sets the global logger. This logger is used by Cheetah#run unless overridden
+  # by the :logger option.
+  def self.logger=(logger)
+    @@logger = logger
+  end
+
   # Runs an external command, optionally capturing its output. Meant as a safe
   # replacement of `backticks`, Kernel#system and similar methods, which are
   # often used in unsecure way. (They allow shell expansion of commands, which
@@ -75,7 +87,7 @@ module Cheetah
     options = args.last.is_a?(Hash) ? args.pop : {}
 
     stdin   = options[:stdin] || ""
-    logger  = options[:logger]
+    logger  = options[:logger] || @@logger
 
     if command.is_a?(Array)
       args    = command[1..-1]

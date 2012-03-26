@@ -1,6 +1,26 @@
 require "spec_helper"
 
 describe Cheetah do
+  describe "logger" do
+    it "returns global logger" do
+      @logger = Logger.new("/dev/null")
+
+      Cheetah.logger = @logger
+
+      Cheetah.logger.should == @logger
+    end
+  end
+
+  describe "logger=" do
+    it "sets global logger" do
+      @logger = Logger.new("/dev/null")
+
+      Cheetah.logger = @logger
+
+      Cheetah.logger.should == @logger
+    end
+  end
+
   describe "run" do
     # Fundamental question: To mock or not to mock the actual system interface?
     #
@@ -319,6 +339,33 @@ describe Cheetah do
           Cheetah.run("/bin/false", :logger => logger)
         rescue Cheetah::ExecutionFailed
           # Eat it.
+        end
+      end
+
+      it "uses global logger without the :logger option" do
+        global_logger = mock
+        global_logger.should_receive(:debug).at_least(:once)
+
+        Cheetah.logger = global_logger
+        begin
+          Cheetah.run("/bin/true")
+        ensure
+          Cheetah.logger = nil
+        end
+      end
+
+      it "overrides global logger with the :logger option" do
+        global_logger = mock
+        global_logger.should_not_receive(:debug)
+
+        local_logger = mock
+        local_logger.should_receive(:debug).at_least(:once)
+
+        Cheetah.logger = global_logger
+        begin
+          Cheetah.run("/bin/true", :logger => local_logger)
+        ensure
+          Cheetah.logger = nil
         end
       end
     end
