@@ -214,7 +214,7 @@ describe Cheetah do
         STDERR.reopen(writer)
         begin
           command = create_command("echo -n error 1>&2")
-          Cheetah.run command
+          Cheetah.run(command)
         ensure
           STDERR.reopen(saved_stderr)
           writer.close
@@ -274,7 +274,7 @@ describe Cheetah do
         logger.should_receive(:debug).with("Standard output: (none)")
         logger.should_receive(:debug).with("Error output: (none)")
 
-        Cheetah.run "/bin/true", "foo", "bar", "baz", :logger => logger
+        Cheetah.run("/bin/true", "foo", "bar", "baz", :logger => logger)
       end
 
       it "logs a successful execution of a command doing I/O" do
@@ -289,7 +289,7 @@ describe Cheetah do
           echo -n ''
           echo -n '' 1>&2
         EOT
-        Cheetah.run command, :stdin => "", :logger => logger
+        Cheetah.run(command, :stdin => "", :logger => logger)
 
         logger = mock
         logger.should_receive(:debug).with("Executing command \"#@tmp_dir/command\" with no arguments.")
@@ -302,7 +302,7 @@ describe Cheetah do
           echo -n 'output'
           echo -n 'error' 1>&2
         EOT
-        Cheetah.run command, :stdin => "blah", :logger => logger
+        Cheetah.run(command, :stdin => "blah", :logger => logger)
       end
 
       it "logs an unsuccessful execution of a command" do
@@ -314,7 +314,7 @@ describe Cheetah do
         logger.should_receive(:debug).with("Error output: (none)")
 
         begin
-          Cheetah.run "/bin/false", :logger => logger
+          Cheetah.run("/bin/false", :logger => logger)
         rescue Cheetah::ExecutionFailed
           # Eat it.
         end
