@@ -139,12 +139,10 @@ module Cheetah
     # deadlock.
     #
     # Similar issues can happen with standard input vs. one of the outputs.
-    stdout = ""
-    stderr = ""
     pipes_readable = [pipe_stdout_read, pipe_stderr_read]
     pipes_writable = [pipe_stdin_write]
     #connect string with its pipe
-    output_pipes = { pipe_stdout_read => stdout, pipe_stderr_read => stderr }
+    output_pipes = { pipe_stdout_read => "", pipe_stderr_read => "" }
     loop do
       pipes_readable.delete_if { |p| p.closed? }
       pipes_writable.delete_if { |p| p.closed? }
@@ -172,6 +170,8 @@ module Cheetah
         pipe.close if stdin.empty?
       end
     end
+    stdout = output_pipes[pipe_stdout_read]
+    stderr = output_pipes[pipe_stderr_read]
 
     pid, status = Process.wait2(pid)
     begin
