@@ -127,7 +127,7 @@ module Cheetah
       end
     end
 
-    [pipe_stdin_read, pipe_stdout_write, pipe_stderr_write].each { |p| p.close if p }
+    [pipe_stdin_read, pipe_stdout_write, pipe_stderr_write].each { |p| p.close }
 
     # We write the command's input and read its output using a select loop. Why?
     # Because otherwise we could end up with a deadlock.
@@ -142,8 +142,8 @@ module Cheetah
     stdout = ""
     stderr = ""
     loop do
-      pipes_readable = [pipe_stdout_read, pipe_stderr_read].compact.select { |p| !p.closed? }
-      pipes_writable = [pipe_stdin_write].compact.select { |p| !p.closed? }
+      pipes_readable = [pipe_stdout_read, pipe_stderr_read].select { |p| !p.closed? }
+      pipes_writable = [pipe_stdin_write].select { |p| !p.closed? }
 
       break if pipes_readable.empty? && pipes_writable.empty?
 
