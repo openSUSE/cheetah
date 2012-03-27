@@ -129,7 +129,7 @@ module Cheetah
       end
     end
 
-    [pipe_stdin_read, pipe_stdout_write, pipe_stderr_write].each { |p| p.close if p }
+    [pipe_stdin_read, pipe_stdout_write, pipe_stderr_write].each { |p| p.close }
 
     # We write the command's input and read its output using a select loop. Why?
     # Because otherwise we could end up with a deadlock.
@@ -143,11 +143,15 @@ module Cheetah
     # Similar issues can happen with standard input vs. one of the outputs.
     stdout = ""
     stderr = ""
+    pipes_readable = [pipe_stdout_read, pipe_stderr_read]
+    pipes_writable = [pipe_stdin_write]
+    #connect string with its pipe
+    output_pipes = { pipe_stdout_read => stdout, pipe_stderr_read => stderr }
     loop do
-      pipes_readable = [pipe_stdout_read, pipe_stderr_read].compact.select { |p| !p.closed? }
-      pipes_writable = [pipe_stdin_write].compact.select { |p| !p.closed? }
+      pipes_readable.delete_if { |p| p.closed? }
+      pipes_writable.delete_if { |p| p.closed? }
 
-      break if pipes_readable.empty? && pipes_writable.empty?
+      break if (pipes_readable+pipes_writable).empty?
 
       ios_read, ios_write, ios_error = select(pipes_readable, pipes_writable,
         pipes_readable + pipes_writable)
@@ -156,26 +160,18 @@ module Cheetah
         raise IOError, "Error when communicating with executed program."
       end
 
-      if ios_read.include?(pipe_stdout_read)
+      ios_read.each do |pipe|
         begin
-          stdout += pipe_stdout_read.readpartial(4096)
+          output_pipes[pipe] += pipe.readpartial(4096)
         rescue EOFError
-          pipe_stdout_read.close
+          pipe.close
         end
       end
 
-      if ios_read.include?(pipe_stderr_read)
-        begin
-          stderr += pipe_stderr_read.readpartial(4096)
-        rescue EOFError
-          pipe_stderr_read.close
-        end
-      end
-
-      if ios_write.include?(pipe_stdin_write)
-        n = pipe_stdin_write.syswrite(stdin)
+      ios_write.each do |pipe|
+        n = pipe.syswrite(stdin)
         stdin = stdin[n..-1]
-        pipe_stdin_write.close if stdin.empty?
+        pipe.close if stdin.empty?
       end
     end
 
