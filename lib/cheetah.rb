@@ -2,6 +2,8 @@
 module Cheetah
   VERSION = File.read(File.dirname(__FILE__) + "/../VERSION").strip
 
+  @@logger = nil
+
   # Exception raised when a command execution fails.
   class ExecutionFailed < StandardError
     attr_reader :command, :args, :status, :stdout, :stderr
