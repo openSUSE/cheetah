@@ -16,6 +16,13 @@ module Cheetah
     end
   end
 
+  # Blank logger. Used only when no logger passed
+  class BlankLogger
+    [:debug,:info,:warn,:error,:fatal].each do |m|
+      define_method(m) {}
+    end
+  end
+
   # Returns the global logger or nil if none is set (the default). This logger
   # is used by Cheetah#run unless overridden by the :logger option.
   def self.logger
@@ -87,7 +94,7 @@ module Cheetah
     options = args.last.is_a?(Hash) ? args.pop : {}
 
     stdin   = options[:stdin] || ""
-    logger  = options[:logger] || @@logger
+    logger  = options[:logger] || @@logger || BlankLogger.new
 
     if command.is_a?(Array)
       args    = command[1..-1]
@@ -98,10 +105,8 @@ module Cheetah
     pipe_stdout_read, pipe_stdout_write = IO.pipe
     pipe_stderr_read, pipe_stderr_write = IO.pipe
 
-    if logger
-      logger.debug "Executing command #{command.inspect} with #{describe_args(args)}."
-      logger.debug "Standard input: " + (stdin.empty? ? "(none)" : stdin)
-    end
+    logger.debug "Executing command #{command.inspect} with #{describe_args(args)}."
+    logger.debug "Standard input: " + (stdin.empty? ? "(none)" : stdin)
 
     pid = fork do
       begin
@@ -186,11 +191,9 @@ module Cheetah
           "failed with status #{status.exitstatus}.")
       end
     ensure
-      if logger
-        logger.debug "Status: #{status.exitstatus}"
-        logger.debug "Standard output: " + (stdout.empty? ? "(none)" : stdout)
-        logger.debug "Error output: " + (stderr.empty? ? "(none)" : stderr)
-      end
+      logger.debug "Status: #{status.exitstatus}"
+      logger.debug "Standard output: " + (stdout.empty? ? "(none)" : stdout)
+      logger.debug "Error output: " + (stderr.empty? ? "(none)" : stderr)
     end
 
     case options[:capture]
