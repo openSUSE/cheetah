@@ -16,37 +16,38 @@ module Cheetah
     end
   end
 
-  # Returns the global logger or nil if none is set (the default). This logger
-  # is used by Cheetah#run unless overridden by the :logger option.
+  # Returns the global logger or `nil` if none is set (the default). This logger
+  # is used by {Cheetah.run} unless overridden by the `:logger` option.
   def self.logger
     @@logger
   end
 
-  # Sets the global logger. This logger is used by Cheetah#run unless overridden
-  # by the :logger option.
+  # Sets the global logger. This logger is used by {Cheetah.run} unless
+  # overridden by the `:logger` option.
   def self.logger=(logger)
     @@logger = logger
   end
 
   # Runs an external command, optionally capturing its output. Meant as a safe
-  # replacement of `backticks`, Kernel#system and similar methods, which are
-  # often used in unsecure way. (They allow shell expansion of commands, which
-  # often means their arguments need proper escaping. The problem is that people
-  # forget to do it or do it badly, causing serious security issues.)
+  # replacement of <code>\`backticks\`</code>, `Kernel#system` and similar
+  # methods, which are often used in unsecure way. (They allow shell expansion
+  # of commands, which often means their arguments need proper escaping. The
+  # problem is that people forget to do it or do it badly, causing serious
+  # security issues.)
   #
-  # Examples:
+  # ### Examples:
   #
-  #   # Run a command, grab its output and handle failures.
-  #   files = nil
-  #   begin
-  #     files = Cheetah.run("ls", "-la", :capture => :stdout)
-  #   rescue Cheetah::ExecutionFailed => e
-  #     puts "Command #{e.command} failed with status #{e.status}."
-  #   end
+  #     # Run a command, grab its output and handle failures.
+  #     files = nil
+  #     begin
+  #       files = Cheetah.run("ls", "-la", :capture => :stdout)
+  #     rescue Cheetah::ExecutionFailed => e
+  #       puts "Command #{e.command} failed with status #{e.status}."
+  #     end
   #
-  #   # Log the executed command, it's status, input and both outputs into
-  #   # user-supplied logger.
-  #   Cheetah.run("qemu-kvm", "foo.raw", :logger => my_logger)
+  #     # Log the executed command, it's status, input and both outputs into
+  #     # user-supplied logger.
+  #     Cheetah.run("qemu-kvm", "foo.raw", :logger => my_logger)
   #
   # The first parameter specifies the command to run, the remaining parameters
   # specify its arguments. It is also possible to specify both the command and
@@ -56,33 +57,32 @@ module Cheetah
   # For security reasons, the command never goes through shell expansion even if
   # only one parameter is specified (i.e. the method does do not adhere to the
   # convention used by other Ruby methods for launching external commands, e.g.
-  # Kernel#system).
+  # `Kernel#system`).
   #
-  # If the command execution succeeds, the returned value depends on the
-  # value of the :capture option (see below). If it fails (the command is not
+  # If the command execution succeeds, the returned value depends on the value
+  # of the `:capture` option (see below). If it fails (the command is not
   # executed for some reason or returns a non-zero exit status), the method
-  # raises a ExecutionFailed exception with detailed information about the
+  # raises a {ExecutionFailed} exception with detailed information about the
   # failure.
   #
-  # Options:
+  # ### Options:
   #
-  #   :capture - configures which output(s) the method captures and returns, the
-  #              valid values are:
+  #   * `:capture` - configures which output(s) the method captures and returns,
+  #                  the valid values are:
+  #     * `nil`                - no output is captured and returned
+  #                              (the default)
+  #     * `:stdout`            - standard output is captured and
+  #                              returned as a string
+  #     * `:stderr`            - error output is captured and returned
+  #                              as a string
+  #     * `[:stdout, :stderr]` - both outputs are captured and returned
+  #                              as a two-element array of strings
   #
-  #                - nil                - no output is captured and returned
-  #                                       (the default)
-  #                - :stdout            - standard output is captured and
-  #                                       returned as a string
-  #                - :stderr            - error output is captured and returned
-  #                                       as a string
-  #                - [:stdout, :stderr] - both outputs are captured and returned
-  #                                       as a two-element array of strings
+  #   * `:stdin`  - if specified, it is a string sent to command's standard
+  #                 input
   #
-  #   :stdin  - if specified, it is a string sent to command's standard input
-  #
-  #   :logger - if specified, the method will log the command, its status, input
-  #             and both outputs to passed logger at the "debug" level
-  #
+  #   * `:logger` - if specified, the method will log the command, its status,
+  #                 input and both outputs to passed logger at the "debug" level
   def self.run(command, *args)
     options = args.last.is_a?(Hash) ? args.pop : {}
 
