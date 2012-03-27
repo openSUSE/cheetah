@@ -206,6 +206,8 @@ module Cheetah
       end
     end
 
+    private
+
     def describe_args(args)
       args.empty? ? "no arguments" : "arguments #{args.map(&:inspect).join(", ")}"
     end
