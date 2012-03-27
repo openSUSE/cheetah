@@ -141,11 +141,13 @@ module Cheetah
     # Similar issues can happen with standard input vs. one of the outputs.
     stdout = ""
     stderr = ""
+    pipes_readable = [pipe_stdout_read, pipe_stderr_read]
+    pipes_writable = [pipe_stdin_write]
     loop do
-      pipes_readable = [pipe_stdout_read, pipe_stderr_read].select { |p| !p.closed? }
-      pipes_writable = [pipe_stdin_write].select { |p| !p.closed? }
+      pipes_readable.delete_if { |p| p.closed? }
+      pipes_writable.delete_if { |p| p.closed? }
 
-      break if pipes_readable.empty? && pipes_writable.empty?
+      break if (pipes_readable+pipes_writable).empty?
 
       ios_read, ios_write, ios_error = select(pipes_readable, pipes_writable,
         pipes_readable + pipes_writable)
