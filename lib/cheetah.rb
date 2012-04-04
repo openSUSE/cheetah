@@ -65,21 +65,11 @@ module Cheetah
   end
 
   class << self
-    # Returns the global logger or `nil` if none is set (the default). This
-    # logger is used by {Cheetah.run} unless overridden by the `:logger` option.
+    # The global logger or `nil` if none is set (the default). This logger is
+    # used by {Cheetah.run} unless overridden by the `:logger` option.
     #
     # @return [Logger, nil] the global logger
-    def logger
-      @logger
-    end
-
-    # Sets the global logger. This logger is used by {Cheetah.run} unless
-    # overridden by the `:logger` option.
-    #
-    # @param [Logger, nil] logger the logger to set
-    def logger=(logger)
-      @logger = logger
-    end
+    attr_accessor :logger
 
     # Runs an external command with specified arguments, optionally passing it
     # an input and capturing its output.
