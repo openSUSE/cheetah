@@ -1,11 +1,59 @@
-# Contains methods for executing external commands safely and conveniently.
+# A simple library for executing external commands safely and conveniently.
+#
+# ## Features
+#
+#   * Easy passing of command input
+#   * Easy capturing of command output (standard, error, or both)
+#   * 100% secure (shell expansion is impossible by design)
+#   * Raises exceptions on errors (no more manual status code checks)
+#   * Optional logging for easy debugging
+#
+# ## Non-features
+#
+#   * Handling of commands producing big outputs
+#   * Handling of interactive commands
+#
+# @example
+#   # Run a command and capture its output
+#   files = Cheetah.run("ls", "-la", :capture => :stdout)
+#
+#   # Run a command and handle errors
+#   begin
+#     Cheetah.run("rm", "/etc/passwd")
+#   rescue Cheetah::ExecutionFailed => e
+#     puts e.message
+#     puts "Standard output: #{e.stdout}"
+#     puts "Error ouptut:    #{e.stderr}"
+#   end
 module Cheetah
+  # Cheetah version (uses [semantic versioning](http://semver.org/)).
   VERSION = File.read(File.dirname(__FILE__) + "/../VERSION").strip
 
   # Exception raised when a command execution fails.
   class ExecutionFailed < StandardError
-    attr_reader :command, :args, :status, :stdout, :stderr
+    # @return [String] the executed command
+    attr_reader :command
 
+    # @return [Array<String>] the executed command arguments
+    attr_reader :args
+
+    # @return [Process::Status] the executed command exit status
+    attr_reader :status
+
+    # @return [String] the output the executed command wrote to stdout
+    attr_reader :stdout
+
+    # @return [String] the output the executed command wrote to stderr
+    attr_reader :stderr
+
+    # Initializes a new {ExecutionFailed} instance.
+    #
+    # @param [String] command the executed command
+    # @param [Array<String>] args the executed command arguments
+    # @param [Process::Status] status the executed command exit status
+    # @param [String] stdout the output the executed command wrote to stdout
+    # @param [String] stderr the output the executed command wrote to stderr
+    # @param [String, nil] message the exception message
     def initialize(command, args, status, stdout, stderr, message = nil)
       super(message)
       @command = command
@@ -19,71 +67,85 @@ module Cheetah
   class << self
     # Returns the global logger or `nil` if none is set (the default). This
     # logger is used by {Cheetah.run} unless overridden by the `:logger` option.
+    #
+    # @return [Logger, nil] the global logger
     def logger
       @logger
     end
 
     # Sets the global logger. This logger is used by {Cheetah.run} unless
     # overridden by the `:logger` option.
+    #
+    # @param [Logger, nil] logger the logger to set
     def logger=(logger)
       @logger = logger
     end
 
-    # Runs an external command, optionally capturing its output. Meant as a safe
-    # replacement of <code>\`backticks\`</code>, `Kernel#system` and similar
-    # methods, which are often used in unsecure way. (They allow shell expansion
-    # of commands, which often means their arguments need proper escaping. The
-    # problem is that people forget to do it or do it badly, causing serious
-    # security issues.)
-    #
-    # ### Examples:
-    #
-    #     # Run a command, grab its output and handle failures.
-    #     files = nil
-    #     begin
-    #       files = Cheetah.run("ls", "-la", :capture => :stdout)
-    #     rescue Cheetah::ExecutionFailed => e
-    #       puts "Command #{e.command} failed with status #{e.status}."
-    #     end
-    #
-    #     # Log the executed command, it's status, input and both outputs into
-    #     # user-supplied logger.
-    #     Cheetah.run("qemu-kvm", "foo.raw", :logger => my_logger)
-    #
-    # The first parameter specifies the command to run, the remaining parameters
-    # specify its arguments. It is also possible to specify both the command and
-    # arguments in the first parameter using an array. If the last parameter is
-    # a hash, it specifies options.
-    #
-    # For security reasons, the command never goes through shell expansion even
-    # if only one parameter is specified (i.e. the method does do not adhere to
-    # the convention used by other Ruby methods for launching external commands,
-    # e.g. `Kernel#system`).
+    # Runs an external command with specified arguments, optionally passing it
+    # an input and capturing its output.
     #
     # If the command execution succeeds, the returned value depends on the value
-    # of the `:capture` option (see below). If it fails (the command is not
-    # executed for some reason or returns a non-zero exit status), the method
-    # raises a {ExecutionFailed} exception with detailed information about the
-    # failure.
+    # of the `:capture` option (see below). If the command can't be executed for
+    # some reason or returns a non-zero exit status, the method raises an
+    # {ExecutionFailed} exception with detailed information about the failure.
     #
-    # ### Options:
+    # The command and its arguments never undergo shell expansion — they are
+    # passed directly to the operating system. While this may create some
+    # inconvenience in certain cases, it eliminates a whole class of security
+    # bugs.
     #
-    #   * `:capture` - configures which output(s) the method captures and
-    #                  returns, the valid values are:
-    #     * `nil`                - no output is captured and returned
-    #                              (the default)
-    #     * `:stdout`            - standard output is captured and
-    #                              returned as a string
-    #     * `:stderr`            - error output is captured and returned
-    #                              as a string
-    #     * `[:stdout, :stderr]` - both outputs are captured and returned
-    #                              as a two-element array of strings
+    # @overload run(command, *args, options = {})
+    #   @param [String] command the command to execute
+    #   @param [Array<String>] args the command arguments
+    #   @param [Hash] options the options to execute the command with
+    #   @option options [String] :stdin ('') command's input
+    #   @option options [String] :capture (nil) configures which output(s) to
+    #     capture, the valid values are:
     #
-    #   * `:stdin`  - if specified, it is a string sent to command's standard
-    #                 input
+    #       * `nil` — no output is captured and returned
+    #       * `:stdout` — standard output is captured and returned as a string
+    #       * `:stderr` — error output is captured and returned as a string
+    #       * `[:stdout, :stderr]` — both outputs are captured and returned as a
+    #         two-element array of strings
+    #   @option options [Logger] :logger (nil) if specified, the method will log
+    #     the command, its status, input and both outputs to the passed logger
+    #     at the `debug` level
     #
-    #   * `:logger` - if specified, the method will log the command, its status,
-    #                 input and both outputs to passed logger at the "debug" level
+    # @overload run(command_and_args, options = {})
+    #   This variant is useful mainly when building the command and its
+    #   arguments programmatically.
+    #
+    #   @param [Array<String>] command_and_args the command to execute (first
+    #     element of the array) and its arguments (remaining elements)
+    #   @param [Hash] options the options to execute the command with
+    #   @option options [String] :stdin ('') command's input
+    #   @option options [String] :capture (nil) configures which output(s) to
+    #     capture, the valid values are:
+    #
+    #       * `nil` — no output is captured and returned
+    #       * `:stdout` — standard output is captured and returned as a string
+    #       * `:stderr` — error output is captured and returned as a string
+    #       * `[:stdout, :stderr]` — both outputs are captured and returned as a
+    #         two-element array of strings
+    #   @option options [Logger] :logger (nil) if specified, the method will log
+    #     the command, its status, input and both outputs to the passed logger
+    #     at the `debug` level
+    #
+    # @raise [ExecutionFailed] when the command can't be executed for some
+    #   reason or returns a non-zero exit status
+    #
+    # @example
+    #   # Run a command and capture its output
+    #   files = Cheetah.run("ls", "-la", :capture => :stdout)
+    #
+    #   # Run a command and handle errors
+    #   begin
+    #     Cheetah.run("rm", "/etc/passwd")
+    #   rescue Cheetah::ExecutionFailed => e
+    #     puts e.message
+    #     puts "Standard output: #{e.stdout}"
+    #     puts "Error ouptut:    #{e.stderr}"
+    #   end
     def run(command, *args)
       options = args.last.is_a?(Hash) ? args.pop : {}
 
