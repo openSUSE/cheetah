@@ -22,6 +22,7 @@ end
 
 Features
 --------
+
   * Easy passing of command input
   * Easy capturing of command output (standard, error, or both)
   * 100% secure (shell expansion is impossible by design)
