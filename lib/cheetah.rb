@@ -183,7 +183,7 @@ module Cheetah
       [pipe_stdin_read, pipe_stdout_write, pipe_stderr_write].each { |p| p.close if p }
 
       # We write the command's input and read its output using a select loop.
-      # Why?  Because otherwise we could end up with a deadlock.
+      # Why? Because otherwise we could end up with a deadlock.
       #
       # Imagine if we first read the whole standard output and then the whole
       # error output, but the executed command would write lot of data but only
