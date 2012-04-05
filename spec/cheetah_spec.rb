@@ -278,73 +278,79 @@ describe Cheetah do
 
     describe "logging" do
       it "logs a successful execution of a command without arguments" do
-        logger = mock
-        logger.should_receive(:debug).with("Executing command \"/bin/true\" with no arguments.")
-        logger.should_receive(:debug).with("Standard input: (none)")
-        logger.should_receive(:debug).with("Status: 0")
-        logger.should_receive(:debug).with("Standard output: (none)")
-        logger.should_receive(:debug).with("Error output: (none)")
-
-        Cheetah.run("/bin/true", :logger => logger)
+        lambda { |logger|
+          Cheetah.run("/bin/true", :logger => logger)
+        }.should log(<<-EOT)
+          DEBUG Executing command "/bin/true" with no arguments.
+          DEBUG Standard input: (none)
+          DEBUG Status: 0
+          DEBUG Standard output: (none)
+          DEBUG Error output: (none)
+        EOT
       end
 
       it "logs a successful execution of a command with arguments" do
-        logger = mock
-        logger.should_receive(:debug).with("Executing command \"/bin/true\" with arguments \"foo\", \"bar\", \"baz\".")
-        logger.should_receive(:debug).with("Standard input: (none)")
-        logger.should_receive(:debug).with("Status: 0")
-        logger.should_receive(:debug).with("Standard output: (none)")
-        logger.should_receive(:debug).with("Error output: (none)")
-
-        Cheetah.run("/bin/true", "foo", "bar", "baz", :logger => logger)
+        lambda { |logger|
+          Cheetah.run("/bin/true", "foo", "bar", "baz", :logger => logger)
+        }.should log(<<-EOT)
+          DEBUG Executing command "/bin/true" with arguments "foo", "bar", "baz".
+          DEBUG Standard input: (none)
+          DEBUG Status: 0
+          DEBUG Standard output: (none)
+          DEBUG Error output: (none)
+        EOT
       end
 
       it "logs a successful execution of a command doing I/O" do
-        logger = mock
-        logger.should_receive(:debug).with("Executing command \"#@tmp_dir/command\" with no arguments.")
-        logger.should_receive(:debug).with("Standard input: (none)")
-        logger.should_receive(:debug).with("Status: 0")
-        logger.should_receive(:debug).with("Standard output: (none)")
-        logger.should_receive(:debug).with("Error output: (none)")
-
         command = create_command(<<-EOT)
           echo -n ''
           echo -n '' 1>&2
         EOT
-        Cheetah.run(command, :stdin => "", :logger => logger)
 
-        logger = mock
-        logger.should_receive(:debug).with("Executing command \"#@tmp_dir/command\" with no arguments.")
-        logger.should_receive(:debug).with("Standard input: blah")
-        logger.should_receive(:debug).with("Status: 0")
-        logger.should_receive(:debug).with("Standard output: output")
-        logger.should_receive(:debug).with("Error output: error")
+        lambda { |logger|
+          Cheetah.run(command, :stdin => "", :logger => logger)
+        }.should log(<<-EOT)
+          DEBUG Executing command "#@tmp_dir/command" with no arguments.
+          DEBUG Standard input: (none)
+          DEBUG Status: 0
+          DEBUG Standard output: (none)
+          DEBUG Error output: (none)
+        EOT
 
         command = create_command(<<-EOT)
           echo -n 'output'
           echo -n 'error' 1>&2
         EOT
-        Cheetah.run(command, :stdin => "blah", :logger => logger)
+
+        lambda { |logger|
+          Cheetah.run(command, :stdin => "blah", :logger => logger)
+        }.should log(<<-EOT)
+          DEBUG Executing command "#@tmp_dir/command" with no arguments.
+          DEBUG Standard input: blah
+          DEBUG Status: 0
+          DEBUG Standard output: output
+          DEBUG Error output: error
+        EOT
       end
 
       it "logs an unsuccessful execution of a command" do
-        logger = mock
-        logger.should_receive(:debug).with("Executing command \"/bin/false\" with no arguments.")
-        logger.should_receive(:debug).with("Standard input: (none)")
-        logger.should_receive(:debug).with("Status: 1")
-        logger.should_receive(:debug).with("Standard output: (none)")
-        logger.should_receive(:debug).with("Error output: (none)")
-
-        begin
-          Cheetah.run("/bin/false", :logger => logger)
-        rescue Cheetah::ExecutionFailed
-          # Eat it.
-        end
+        lambda { |logger|
+          begin
+            Cheetah.run("/bin/false", :logger => logger)
+          rescue Cheetah::ExecutionFailed
+            # Eat it.
+          end
+        }.should log(<<-EOT)
+          DEBUG Executing command "/bin/false" with no arguments.
+          DEBUG Standard input: (none)
+          DEBUG Status: 1
+          DEBUG Standard output: (none)
+          DEBUG Error output: (none)
+        EOT
       end
 
       it "uses global logger without the :logger option" do
-        global_logger = mock
-        global_logger.should_receive(:debug).at_least(:once)
+        global_logger, global_io = logger_with_io
 
         Cheetah.logger = global_logger
         begin
@@ -352,14 +358,13 @@ describe Cheetah do
         ensure
           Cheetah.logger = nil
         end
+
+        global_io.string.should_not be_empty
       end
 
       it "overrides global logger with the :logger option" do
-        global_logger = mock
-        global_logger.should_not_receive(:debug)
-
-        local_logger = mock
-        local_logger.should_receive(:debug).at_least(:once)
+        global_logger, global_io = logger_with_io
+        local_logger, local_io = logger_with_io
 
         Cheetah.logger = global_logger
         begin
@@ -367,6 +372,9 @@ describe Cheetah do
         ensure
           Cheetah.logger = nil
         end
+
+        global_io.string.should be_empty
+        local_io.string.should_not be_empty
       end
     end
 
