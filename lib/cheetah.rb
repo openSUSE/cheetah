@@ -194,9 +194,11 @@ module Cheetah
       # Similar issues can happen with standard input vs. one of the outputs.
       stdout = ""
       stderr = ""
+      pipes_readable = [pipe_stdout_read, pipe_stderr_read]
+      pipes_writable = [pipe_stdin_write]
       loop do
-        pipes_readable = [pipe_stdout_read, pipe_stderr_read].select { |p| !p.closed? }
-        pipes_writable = [pipe_stdin_write].select { |p| !p.closed? }
+        pipes_readable.reject!(&:closed?)
+        pipes_writable.reject!(&:closed?)
 
         break if pipes_readable.empty? && pipes_writable.empty?
 
