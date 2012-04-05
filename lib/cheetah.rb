@@ -83,6 +83,12 @@ module Cheetah
     # inconvenience in certain cases, it eliminates a whole class of security
     # bugs.
     #
+    # The command execution can be logged using a logger. It can be set globally
+    # (using the {Cheetah.logger} attribute) or locally (using the `:logger`
+    # option).  The local setting overrides the global one. If a logger is set,
+    # the method will log the command, its status, input and both outputs to it
+    # at the `debug` level.
+    #
     # @overload run(command, *args, options = {})
     #   @param [String] command the command to execute
     #   @param [Array<String>] args the command arguments
@@ -96,9 +102,9 @@ module Cheetah
     #       * `:stderr` — error output is captured and returned as a string
     #       * `[:stdout, :stderr]` — both outputs are captured and returned as a
     #         two-element array of strings
-    #   @option options [Logger] :logger (nil) if specified, the method will log
-    #     the command, its status, input and both outputs to the passed logger
-    #     at the `debug` level
+    #   @option options [Logger, nil] :logger (nil) logger to log the command
+    #     execution; if set, overrides the global logger (set by
+    #     {Cheetah.logger})
     #
     # @overload run(command_and_args, options = {})
     #   This variant is useful mainly when building the command and its
