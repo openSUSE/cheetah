@@ -78,7 +78,7 @@ rescue Cheetah::ExecutionFailed => e
 end
 ```
 
-For debugging purposes, you can also use a logger. Cheetah will log the command, its status, input and both outputs to it at the `debug` level:
+For debugging purposes, you can also use a logger. Cheetah will log the command, its status, input and both outputs to it. The `:info` level will be used for normal messages, the `:error` level for messages about errors (non-zero exit status or non-empty error output):
 
 ```ruby
 # Log the execution

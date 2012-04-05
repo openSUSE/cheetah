@@ -281,11 +281,11 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run("/bin/true", :logger => logger)
         }.should log(<<-EOT)
-          DEBUG Executing command "/bin/true" with no arguments.
-          DEBUG Standard input: (none)
-          DEBUG Status: 0
-          DEBUG Standard output: (none)
-          DEBUG Error output: (none)
+          INFO Executing command "/bin/true" with no arguments.
+          INFO Standard input: (none)
+          INFO Status: 0
+          INFO Standard output: (none)
+          INFO Error output: (none)
         EOT
       end
 
@@ -293,11 +293,11 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run("/bin/true", "foo", "bar", "baz", :logger => logger)
         }.should log(<<-EOT)
-          DEBUG Executing command "/bin/true" with arguments "foo", "bar", "baz".
-          DEBUG Standard input: (none)
-          DEBUG Status: 0
-          DEBUG Standard output: (none)
-          DEBUG Error output: (none)
+          INFO Executing command "/bin/true" with arguments "foo", "bar", "baz".
+          INFO Standard input: (none)
+          INFO Status: 0
+          INFO Standard output: (none)
+          INFO Error output: (none)
         EOT
       end
 
@@ -310,11 +310,11 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run(command, :stdin => "", :logger => logger)
         }.should log(<<-EOT)
-          DEBUG Executing command "#@tmp_dir/command" with no arguments.
-          DEBUG Standard input: (none)
-          DEBUG Status: 0
-          DEBUG Standard output: (none)
-          DEBUG Error output: (none)
+          INFO Executing command "#@tmp_dir/command" with no arguments.
+          INFO Standard input: (none)
+          INFO Status: 0
+          INFO Standard output: (none)
+          INFO Error output: (none)
         EOT
 
         command = create_command(<<-EOT)
@@ -325,11 +325,11 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run(command, :stdin => "blah", :logger => logger)
         }.should log(<<-EOT)
-          DEBUG Executing command "#@tmp_dir/command" with no arguments.
-          DEBUG Standard input: blah
-          DEBUG Status: 0
-          DEBUG Standard output: output
-          DEBUG Error output: error
+          INFO Executing command "#@tmp_dir/command" with no arguments.
+          INFO Standard input: blah
+          INFO Status: 0
+          INFO Standard output: output
+          ERROR Error output: error
         EOT
       end
 
@@ -341,11 +341,11 @@ describe Cheetah do
             # Eat it.
           end
         }.should log(<<-EOT)
-          DEBUG Executing command "/bin/false" with no arguments.
-          DEBUG Standard input: (none)
-          DEBUG Status: 1
-          DEBUG Standard output: (none)
-          DEBUG Error output: (none)
+          INFO Executing command "/bin/false" with no arguments.
+          INFO Standard input: (none)
+          ERROR Status: 1
+          INFO Standard output: (none)
+          INFO Error output: (none)
         EOT
       end
 

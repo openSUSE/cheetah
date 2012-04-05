@@ -86,8 +86,9 @@ module Cheetah
     # The command execution can be logged using a logger. It can be set globally
     # (using the {Cheetah.logger} attribute) or locally (using the `:logger`
     # option).  The local setting overrides the global one. If a logger is set,
-    # the method will log the command, its status, input and both outputs to it
-    # at the `debug` level.
+    # the method will log the command, its status, input and both outputs to it.
+    # The `:info` level will be used for normal messages, the `:error` level for
+    # messages about errors (non-zero exit status or non-empty error output).
     #
     # @overload run(command, *args, options = {})
     #   @param [String] command the command to execute
@@ -145,8 +146,8 @@ module Cheetah
       pipe_stderr_read, pipe_stderr_write = IO.pipe
 
       if logger
-        logger.debug "Executing command #{command.inspect} with #{describe_args(args)}."
-        logger.debug "Standard input: " + (stdin.empty? ? "(none)" : stdin)
+        logger.info "Executing command #{command.inspect} with #{describe_args(args)}."
+        logger.info "Standard input: " + (stdin.empty? ? "(none)" : stdin)
       end
 
       pid = fork do
@@ -229,9 +230,11 @@ module Cheetah
         end
       ensure
         if logger
-          logger.debug "Status: #{status.exitstatus}"
-          logger.debug "Standard output: " + (stdout.empty? ? "(none)" : stdout)
-          logger.debug "Error output: " + (stderr.empty? ? "(none)" : stderr)
+          logger.log status.success? ? Logger::INFO : Logger::ERROR,
+            "Status: #{status.exitstatus}"
+          logger.info "Standard output: " + (stdout.empty? ? "(none)" : stdout)
+          logger.log stderr.empty?  ? Logger::INFO : Logger::ERROR,
+            "Error output: " + (stderr.empty? ? "(none)" : stderr)
         end
       end
 
