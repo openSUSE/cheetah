@@ -106,19 +106,8 @@ module Cheetah
     #
     #   @param [Array<String>] command_and_args the command to execute (first
     #     element of the array) and its arguments (remaining elements)
-    #   @param [Hash] options the options to execute the command with
-    #   @option options [String] :stdin ('') command's input
-    #   @option options [String] :capture (nil) configures which output(s) to
-    #     capture, the valid values are:
-    #
-    #       * `nil` — no output is captured and returned
-    #       * `:stdout` — standard output is captured and returned as a string
-    #       * `:stderr` — error output is captured and returned as a string
-    #       * `[:stdout, :stderr]` — both outputs are captured and returned as a
-    #         two-element array of strings
-    #   @option options [Logger] :logger (nil) if specified, the method will log
-    #     the command, its status, input and both outputs to the passed logger
-    #     at the `debug` level
+    #   @param [Hash] options the options to execute the command with, same as
+    #     in the first variant
     #
     # @raise [ExecutionFailed] when the command can't be executed for some
     #   reason or returns a non-zero exit status
