@@ -1,3 +1,15 @@
+0.2.0 (2012-04-05)
+------------------
+
+* Logger can be set globally.
+* Use :info and :error levels for logging instead of :debug.
+* Added API documentation.
+* Added proper README.md.
+* Updated gem description.
+* Rewrote tests into RSpec.
+* Improved performance for commands with big outputs.
+* Internal code improvements.
+
 0.1.0 (2012-03-23)
 ------------------
 
