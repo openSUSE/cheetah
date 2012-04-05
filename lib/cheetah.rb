@@ -197,7 +197,7 @@ module Cheetah
 
         ios_read.each do |pipe|
           begin
-            outputs[pipe] += pipe.readpartial(4096)
+            outputs[pipe] << pipe.readpartial(4096)
           rescue EOFError
             pipe.close
           end
