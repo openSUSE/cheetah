@@ -13,11 +13,10 @@
 #   * Handling of commands producing big outputs
 #   * Handling of interactive commands
 #
-# @example
-#   # Run a command and capture its output
+# @example Run a command and capture its output
 #   files = Cheetah.run("ls", "-la", :capture => :stdout)
 #
-#   # Run a command and handle errors
+# @example Run a command and handle errors
 #   begin
 #     Cheetah.run("rm", "/etc/passwd")
 #   rescue Cheetah::ExecutionFailed => e
@@ -124,11 +123,10 @@ module Cheetah
     # @raise [ExecutionFailed] when the command can't be executed for some
     #   reason or returns a non-zero exit status
     #
-    # @example
-    #   # Run a command and capture its output
+    # @example Run a command and capture its output
     #   files = Cheetah.run("ls", "-la", :capture => :stdout)
     #
-    #   # Run a command and handle errors
+    # @example Run a command and handle errors
     #   begin
     #     Cheetah.run("rm", "/etc/passwd")
     #   rescue Cheetah::ExecutionFailed => e
