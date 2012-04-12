@@ -230,10 +230,10 @@ module Cheetah
         end
       ensure
         if logger
-          logger.log status.success? ? Logger::INFO : Logger::ERROR,
+          logger.add status.success? ? Logger::INFO : Logger::ERROR,
             "Status: #{status.exitstatus}"
           logger.info "Standard output: " + (stdout.empty? ? "(none)" : stdout)
-          logger.log stderr.empty?  ? Logger::INFO : Logger::ERROR,
+          logger.add stderr.empty?  ? Logger::INFO : Logger::ERROR,
             "Error output: " + (stderr.empty? ? "(none)" : stderr)
         end
       end
