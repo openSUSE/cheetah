@@ -1,3 +1,9 @@
+0.2.1 (2012-04-12)
+------------------
+
+* Use Logger#add instead of Logger#log. This means ActiveSupport::BufferedLogger
+  can now be passed as a logger.
+
 0.2.0 (2012-04-05)
 ------------------
 
