@@ -1,26 +1,6 @@
 require "spec_helper"
 
 describe Cheetah do
-  describe "logger" do
-    it "returns global logger" do
-      @logger = Logger.new("/dev/null")
-
-      Cheetah.logger = @logger
-
-      Cheetah.logger.should == @logger
-    end
-  end
-
-  describe "logger=" do
-    it "sets global logger" do
-      @logger = Logger.new("/dev/null")
-
-      Cheetah.logger = @logger
-
-      Cheetah.logger.should == @logger
-    end
-  end
-
   describe "run" do
     # Fundamental question: To mock or not to mock the actual system interface?
     #
