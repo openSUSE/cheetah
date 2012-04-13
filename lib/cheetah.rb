@@ -96,9 +96,10 @@ module Cheetah
     #
     # The command execution can be logged using a logger passed in the `:logger`
     # option. If a logger is set, the method will log the command, its status,
-    # input and both outputs to it.  The `:info` level will be used for normal
-    # messages, the `:error` level for messages about errors (non-zero exit
-    # status or non-empty error output).
+    # input and both outputs to it. By default, the `Logger::INFO` level will be
+    # used for normal messages and the `Logger::ERROR` level for messages about
+    # errors (non-zero exit status or non-empty error output), but this can be
+    # changed using the `:logger_level_info` and `:logger_level_error` options.
     #
     # Values of options not set using the `options` parameter are taken from
     # {Cheetah.default_options}. If a value is not specified there too, the
@@ -119,6 +120,10 @@ module Cheetah
     #         two-element array of strings
     #   @option options [Logger, nil] :logger (nil) logger to log the command
     #     execution
+    #   @option options [Integer] :logger_level_info (Logger::INFO) level for
+    #     logging normal messages; makes sense only if `:logger` is specified
+    #   @option options [Integer] :logger_level_error (Logger::ERROR) level for
+    #     logging error messages; makes sense only if `:logger` is specified
     #
     # @overload run(command_and_args, options = {})
     #   This variant is useful mainly when building the command and its
@@ -147,8 +152,10 @@ module Cheetah
       options = args.last.is_a?(Hash) ? args.pop : {}
       options = @default_options.merge(options)
 
-      stdin   = options[:stdin] || ""
-      logger  = options[:logger]
+      stdin              = options[:stdin] || ""
+      logger             = options[:logger]
+      logger_level_info  = options[:logger_level_info]  || Logger::INFO
+      logger_level_error = options[:logger_level_error] || Logger::ERROR
 
       if command.is_a?(Array)
         args    = command[1..-1]
@@ -160,8 +167,10 @@ module Cheetah
       pipe_stderr_read, pipe_stderr_write = IO.pipe
 
       if logger
-        logger.info "Executing command #{command.inspect} with #{describe_args(args)}."
-        logger.info "Standard input: " + (stdin.empty? ? "(none)" : stdin)
+        logger.add logger_level_info,
+          "Executing command #{command.inspect} with #{describe_args(args)}."
+        logger.add logger_level_info,
+          "Standard input: " + (stdin.empty? ? "(none)" : stdin)
       end
 
       pid = fork do
@@ -244,10 +253,11 @@ module Cheetah
         end
       ensure
         if logger
-          logger.add status.success? ? Logger::INFO : Logger::ERROR,
+          logger.add status.success? ? logger_level_info : logger_level_error,
             "Status: #{status.exitstatus}"
-          logger.info "Standard output: " + (stdout.empty? ? "(none)" : stdout)
-          logger.add stderr.empty?  ? Logger::INFO : Logger::ERROR,
+          logger.add logger_level_info,
+            "Standard output: " + (stdout.empty? ? "(none)" : stdout)
+          logger.add stderr.empty?  ? logger_level_info : logger_level_error,
             "Error output: " + (stderr.empty? ? "(none)" : stderr)
         end
       end

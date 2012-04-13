@@ -78,11 +78,18 @@ rescue Cheetah::ExecutionFailed => e
 end
 ```
 
-For debugging purposes, you can also use a logger. Cheetah will log the command, its status, input and both outputs to it. The `:info` level will be used for normal messages, the `:error` level for messages about errors (non-zero exit status or non-empty error output):
+For debugging purposes, you can also use a logger. Cheetah will log the command, its status, input and both outputs to it. By default, the `Logger::INFO` level will be used for normal messages and the `Logger::ERROR` level for messages about errors (non-zero exit status or non-empty error output), but this can be changed if needed:
 
 ```ruby
 # Log the execution
 Cheetah.run("ls -l", :logger => logger)
+
+# Change levels of logged messages
+Cheetah.run("ls -l",
+  :logger             => logger,
+  :logger_level_info  => Logger::DEBUG,
+  :logger_level_error => Logger::WARN
+)
 ```
 
 To avoid repetition, you can set global default value of any option passed too `Cheetah.run`:

@@ -255,6 +255,34 @@ describe Cheetah do
           INFO Error output: (none)
         EOT
       end
+
+      it "logs info messages on the level specified by the :logger_level_info option" do
+        lambda { |logger|
+          Cheetah.run("/bin/true", :logger => logger, :logger_level_info => Logger::DEBUG)
+        }.should log(<<-EOT)
+          DEBUG Executing command "/bin/true" with no arguments.
+          DEBUG Standard input: (none)
+          DEBUG Status: 0
+          DEBUG Standard output: (none)
+          DEBUG Error output: (none)
+        EOT
+      end
+
+      it "logs error messages on the level specified by the :logger_level_error option" do
+        lambda { |logger|
+          begin
+            Cheetah.run("/bin/false", :logger => logger, :logger_level_error => Logger::WARN)
+          rescue Cheetah::ExecutionFailed
+            # Eat it.
+          end
+        }.should log(<<-EOT)
+          INFO Executing command "/bin/false" with no arguments.
+          INFO Standard input: (none)
+          WARN Status: 1
+          INFO Standard output: (none)
+          INFO Error output: (none)
+        EOT
+      end
     end
 
     describe "options handling" do
