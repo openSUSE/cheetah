@@ -247,33 +247,33 @@ describe Cheetah do
           INFO Error output: (none)
         EOT
       end
+    end
 
-      it "uses global logger without the :logger option" do
-        global_logger, global_io = logger_with_io
+    describe "options handling" do
+      # To cover the code properly, the following specs should test all the
+      # options. However, that would introduce unwanted dependency on the list
+      # of options, so let's just test that one option (:stdin) works properly.
 
-        Cheetah.logger = global_logger
+      it "uses default options for unspecified options" do
+        saved_default_options = Cheetah.default_options
+        Cheetah.default_options = { :stdin => "input" }
+
         begin
-          Cheetah.run("/bin/true")
+          Cheetah.run("cat", :capture => :stdout).should == "input"
         ensure
-          Cheetah.logger = nil
+          Cheetah.default_options = saved_default_options
         end
-
-        global_io.string.should_not be_empty
       end
 
-      it "overrides global logger with the :logger option" do
-        global_logger, global_io = logger_with_io
-        local_logger, local_io = logger_with_io
+      it "prefers passed options over the global ones" do
+        saved_default_options = Cheetah.default_options
+        Cheetah.default_options = { :stdin => "global_input" }
 
-        Cheetah.logger = global_logger
         begin
-          Cheetah.run("/bin/true", :logger => local_logger)
+          Cheetah.run("cat", :stdin => "passed_input", :capture => :stdout).should == "passed_input"
         ensure
-          Cheetah.logger = nil
+          Cheetah.default_options = saved_default_options
         end
-
-        global_io.string.should be_empty
-        local_io.string.should_not be_empty
       end
     end
 

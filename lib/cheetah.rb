@@ -64,11 +64,22 @@ module Cheetah
   end
 
   class << self
-    # The global logger or `nil` if none is set (the default). This logger is
-    # used by {Cheetah.run} unless overridden by the `:logger` option.
+    # The default options of the {Cheetah.run} method. Values of options not
+    # specified in its `options` parameter are taken from here. If a value is
+    # not specified here too, the default value described in the {Cheetah.run}
+    # documentation is used.
     #
-    # @return [Logger, nil] the global logger
-    attr_accessor :logger
+    # By default, no values are specified here.
+    #
+    # @example Setting a logger once for execution of multiple commands
+    #   Cheetah.default_options = { :logger = my_logger }
+    #   Cheetah.run("./configure")
+    #   Cheetah.run("make")
+    #   Cheetah.run("make", "install")
+    #   Cheetah.default_options = {}
+    #
+    # @return [Hash] the default options of the {Cheetah.run} method
+    attr_accessor :default_options
 
     # Runs an external command with specified arguments, optionally passing it
     # an input and capturing its output.
@@ -83,12 +94,15 @@ module Cheetah
     # inconvenience in certain cases, it eliminates a whole class of security
     # bugs.
     #
-    # The command execution can be logged using a logger. It can be set globally
-    # (using the {Cheetah.logger} attribute) or locally (using the `:logger`
-    # option).  The local setting overrides the global one. If a logger is set,
-    # the method will log the command, its status, input and both outputs to it.
-    # The `:info` level will be used for normal messages, the `:error` level for
-    # messages about errors (non-zero exit status or non-empty error output).
+    # The command execution can be logged using a logger passed in the `:logger`
+    # option. If a logger is set, the method will log the command, its status,
+    # input and both outputs to it.  The `:info` level will be used for normal
+    # messages, the `:error` level for messages about errors (non-zero exit
+    # status or non-empty error output).
+    #
+    # Values of options not set using the `options` parameter are taken from
+    # {Cheetah.default_options}. If a value is not specified there too, the
+    # default value described in the `options` parameter documentation is used.
     #
     # @overload run(command, *args, options = {})
     #   @param [String] command the command to execute
@@ -104,8 +118,7 @@ module Cheetah
     #       * `[:stdout, :stderr]` — both outputs are captured and returned as a
     #         two-element array of strings
     #   @option options [Logger, nil] :logger (nil) logger to log the command
-    #     execution; if set, overrides the global logger (set by
-    #     {Cheetah.logger})
+    #     execution
     #
     # @overload run(command_and_args, options = {})
     #   This variant is useful mainly when building the command and its
@@ -132,9 +145,10 @@ module Cheetah
     #   end
     def run(command, *args)
       options = args.last.is_a?(Hash) ? args.pop : {}
+      options = @default_options.merge(options)
 
       stdin   = options[:stdin] || ""
-      logger  = options[:logger] || @logger
+      logger  = options[:logger]
 
       if command.is_a?(Array)
         args    = command[1..-1]
@@ -256,4 +270,7 @@ module Cheetah
       args.empty? ? "no arguments" : "arguments #{args.map(&:inspect).join(", ")}"
     end
   end
+
+  self.default_options = {}
 end
+

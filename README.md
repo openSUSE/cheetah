@@ -83,13 +83,17 @@ For debugging purposes, you can also use a logger. Cheetah will log the command,
 ```ruby
 # Log the execution
 Cheetah.run("ls -l", :logger => logger)
+```
 
-# Or, if you're tired of passing the :logger option all the time...
-Cheetah.logger = my_logger
+To avoid repetition, you can set global default value of any option passed too `Cheetah.run`:
+
+```ruby
+# If you're tired of passing the :logger option all the time...
+Cheetah.default_options = { :logger = my_logger }
 Cheetah.run("./configure")
 Cheetah.run("make")
 Cheetah.run("make", "install")
-Cheetah.logger = nil
+Cheetah.default_options = {}
 ```
 
 For more information, see the [API documentation](http://rubydoc.info/github/openSUSE/cheetah/frames).
