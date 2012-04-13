@@ -176,6 +176,14 @@ describe Cheetah do
     end
 
     describe "logging" do
+      it "does not log anything with no :logger option" do
+        lambda { Cheetah.run("/bin/true") }.should log("")
+      end
+
+      it "does not log anything with :logger => nil" do
+        lambda { Cheetah.run("/bin/true") }.should log("")
+      end
+
       it "logs a successful execution of a command without arguments" do
         lambda { |logger|
           Cheetah.run("/bin/true", :logger => logger)
