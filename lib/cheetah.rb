@@ -201,22 +201,11 @@ module Cheetah
       pid = fork do
         begin
           pipe_stdin_write.close
-          STDIN.reopen(pipe_stdin_read)
-          pipe_stdin_read.close
-
           pipe_stdout_read.close
-          STDOUT.reopen(pipe_stdout_write)
-          pipe_stdout_write.close
-
           pipe_stderr_read.close
           STDERR.reopen(pipe_stderr_write)
           pipe_stderr_write.close
-
-          # All file descriptors from 3 above should be closed here, but since I
-          # don't know about any way how to detect the maximum file descriptor
-          # number portably in Ruby, I didn't implement it. Patches welcome.
-
-          exec([command, command], *args)
+          CommandForker.run(pipe_stdin_read, pipe_stdout_write,[command,args].flatten)
         rescue SystemCallError => e
           exit!(127)
         end
@@ -302,8 +291,159 @@ module Cheetah
       end
     end
 
-    private
+    def run_piped(*args)
+      options = args.last.is_a?(Hash) ? args.pop : {}
+      options = @default_options.merge(options)
+      #handle redirect to file
+      if options[:redirect_stdout].is_a? String
+        return File.open(options[:redirect_stdout],"w") do |f|
+          options[:redirect_stdout] = f
+          args << options #merge it back
+          run_piped(*args)
+        end
+      end
 
+      stdin              = options[:stdin] || ""
+      logger             = options[:logger]
+      logger_level_info  = options[:logger_level_info]  || Logger::INFO
+      logger_level_error = options[:logger_level_error] || Logger::ERROR
+
+      pipe_stdin_read,  pipe_stdin_write  = IO.pipe
+      pipe_stdout_read, pipe_stdout_write = IO.pipe
+      pipe_stderr_read, pipe_stderr_write = IO.pipe
+
+      if logger
+        logger.add logger_level_info,
+          "Executing piped command #{args.inspect}." #FIXME refactor command description
+        logger.add logger_level_info,
+          "Standard input: " + (stdin.empty? ? "(none)" : stdin)
+      end
+
+      pid = fork do
+        begin
+          pipe_stdin_write.close
+          pipe_stdout_read.close
+          pipe_stderr_read.close
+          STDERR.reopen(pipe_stderr_write)
+          pipe_stderr_write.close #get stderr only from last command, we don't have enough pipes :)
+          CommandForker.run(pipe_stdin_read, pipe_stdout_write, args)
+        rescue SystemCallError => e
+          exit!(127)
+        end
+      end
+
+      [pipe_stdin_read, pipe_stdout_write, pipe_stderr_write].each { |p| p.close }
+
+      # We write the command's input and read its output using a select loop.
+      # Why? Because otherwise we could end up with a deadlock.
+      #
+      # Imagine if we first read the whole standard output and then the whole
+      # error output, but the executed command would write lot of data but only
+      # to the error output. Sooner or later it would fill the buffer and block,
+      # while we would be blocked on reading the standard output -- classic
+      # deadlock.
+      #
+      # Similar issues can happen with standard input vs. one of the outputs.
+      outputs = { 
+        pipe_stdout_read => options[:redirect_stdout] || "",
+        pipe_stderr_read => ""
+      }
+      pipes_readable = [pipe_stdout_read, pipe_stderr_read]
+      pipes_writable = [pipe_stdin_write]
+      loop do
+        pipes_readable.reject!(&:closed?)
+        pipes_writable.reject!(&:closed?)
+
+        break if pipes_readable.empty? && pipes_writable.empty?
+
+        ios_read, ios_write, ios_error = select(pipes_readable, pipes_writable,
+          pipes_readable + pipes_writable)
+
+        if !ios_error.empty?
+          raise IOError, "Error when communicating with executed program."
+        end
+
+        ios_read.each do |pipe|
+          begin
+            outputs[pipe] << pipe.readpartial(4096)
+          rescue EOFError
+            pipe.close
+          end
+        end
+
+        ios_write.each do |pipe|
+          n = pipe.syswrite(stdin)
+          stdin = stdin[n..-1]
+          pipe.close if stdin.empty?
+        end
+      end
+
+      stdout = outputs[pipe_stdout_read]
+      stderr = outputs[pipe_stderr_read]
+
+      pid, status = Process.wait2(pid)
+      begin
+        if !status.success?
+          raise ExecutionFailed.new(command, args, status, stdout, stderr,
+            "Execution of command #{command.inspect} " +
+            "with #{describe_args(args)} " +
+            "failed with status #{status.exitstatus}.")
+        end
+      ensure
+        if logger
+          logger.add status.success? ? logger_level_info : logger_level_error,
+            "Status: #{status.exitstatus}"
+          logger.add logger_level_info,
+            "Standard output: " + (stdout.empty? ? "(none)" : stdout)
+          logger.add stderr.empty?  ? logger_level_info : logger_level_error,
+            "Error output: " + (stderr.empty? ? "(none)" : stderr)
+        end
+      end
+
+      case options[:capture]
+        when nil
+          nil
+        when :stdout
+          stdout
+        when :stderr
+          stderr
+        when [:stdout, :stderr]
+          [stdout, stderr]
+      end
+
+    end
+
+    private
+    class CommandForker
+      class << self
+        def run(inpipe,outpipe,*args)
+          new_outpipe = outpipe
+          my_inpipe = inpipe
+          if args.size > 1 # we need pipeing
+            my_inpipe, new_outpipe = IO.pipe
+          end
+          STDIN.reopen(my_inpipe)
+          my_inpipe.close
+          STDOUT.reopen(outpipe)
+          outpipe.close
+          
+          if args.size > 1
+            fork do
+              begin
+                STDERR.close unless STDERR.closed? #we capture stderr only from last command, fixes welcome if it not add lot of pipes
+                my_inpipe.close
+                CommandForker.run(inpipe,new_outpipe,args[0..-2])
+              rescue SystemCallError => e
+                exit!(127)
+              end
+            end
+          end
+          new_outpipe.close unless new_outpipe.closed?
+          my_args = args.last
+          exec([my_args.first, my_args.first], *my_args[1..-1])
+        end
+      end
+    end
     def describe_args(args)
       args.empty? ? "no arguments" : "arguments #{args.map(&:inspect).join(", ")}"
     end
