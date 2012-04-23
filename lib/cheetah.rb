@@ -110,6 +110,10 @@ module Cheetah
     #   @param [Array<String>] args the command arguments
     #   @param [Hash] options the options to execute the command with
     #   @option options [String] :stdin ('') command's input
+    #   @option options [String,IO] :redirect_stdout (nil) redirect stdout to 
+    #     target. If parameter is IO, then write to it. If it is string, then 
+    #     open it as file and write there. Redirected stdout means, that stdout
+    #     is not logged or captured.
     #   @option options [String] :capture (nil) configures which output(s) to
     #     capture, the valid values are:
     #
@@ -140,6 +144,19 @@ module Cheetah
     # @example Run a command and capture its output
     #   files = Cheetah.run("ls", "-la", :capture => :stdout)
     #
+    # @example Run a command and redirect its output to file
+    #   Cheetah.run("xzdec", "test.txt.xz", :redirect_stdout => "test.txt")
+    #
+    # @example Run a command and redirect its output to stream
+    #   begin
+    #     File.open("test.txt","w") do |f|
+    #       Cheetah.run("xzdec", "test.txt.xz", :redirect_stdout => "test.txt")
+    #     end
+    #   rescue Cheetah::ExecutionFailed
+    #     #ensure that we clean output if command failed
+    #     FileUtils.rm "test.txt" if File.exists? "test.txt"
+    #   end
+    #
     # @example Run a command and handle errors
     #   begin
     #     Cheetah.run("rm", "/etc/passwd")
@@ -151,6 +168,14 @@ module Cheetah
     def run(command, *args)
       options = args.last.is_a?(Hash) ? args.pop : {}
       options = @default_options.merge(options)
+      #handle redirect to file
+      if options[:redirect_stdout].is_a? String
+        return File.open(options[:redirect_stdout],"w") do |f|
+          options[:redirect_stdout] = f
+          args << options #merge it back
+          run(command,*args)
+        end
+      end
 
       stdin              = options[:stdin] || ""
       logger             = options[:logger]
@@ -209,7 +234,10 @@ module Cheetah
       # deadlock.
       #
       # Similar issues can happen with standard input vs. one of the outputs.
-      outputs = { pipe_stdout_read => "", pipe_stderr_read => "" }
+      outputs = { 
+        pipe_stdout_read => options[:redirect_stdout] || "",
+        pipe_stderr_read => ""
+      }
       pipes_readable = [pipe_stdout_read, pipe_stderr_read]
       pipes_writable = [pipe_stdin_write]
       loop do
