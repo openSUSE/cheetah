@@ -249,7 +249,8 @@ module Cheetah
           raise ExecutionFailed.new(command, args, status, stdout, stderr,
             "Execution of command #{command.inspect} " +
             "with #{describe_args(args)} " +
-            "failed with status #{status.exitstatus}.")
+            "failed with status #{status.exitstatus}." +
+            "First line of error output: #{stderr.split("\n").first}")
         end
       ensure
         if logger
