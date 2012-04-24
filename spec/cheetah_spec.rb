@@ -418,6 +418,24 @@ describe Cheetah do
             e.stderr.should == ""
           }
         end
+
+        it "redirect stdout to file correctly" do
+          test_output = File.join(@tmp_dir,"output")
+          test_string = "Increadible important message"
+          Cheetah.run("/bin/echo",test_string, :redirect_stdout => test_output)
+          File.exists?(test_output).should be_true
+          File.read(test_output).should == test_string+"\n" #echo add new line character
+        end
+
+        it "redirect stdout to stream correctly" do
+          test_output = File.join(@tmp_dir,"output")
+          test_string = "Increadible important message"
+          File.open(test_output,"w") do |f|
+            Cheetah.run("/bin/echo",test_string, :redirect_stdout => f)
+          end
+          File.exists?(test_output).should be_true
+          File.read(test_output).should == test_string+"\n" #echo add new line character
+        end
       end
     end
   end
