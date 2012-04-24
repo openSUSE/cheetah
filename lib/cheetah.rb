@@ -152,10 +152,8 @@ module Cheetah
       options = args.last.is_a?(Hash) ? args.pop : {}
       options = @default_options.merge(options)
 
-      stdin              = options[:stdin] || ""
-      logger             = options[:logger]
-      logger_level_info  = options[:logger_level_info]  || Logger::INFO
-      logger_level_error = options[:logger_level_error] || Logger::ERROR
+      stdin              = options[:stdin]
+      log                = LoggerTransport.new options
 
       if command.is_a?(Array)
         args    = command[1..-1]
@@ -166,12 +164,9 @@ module Cheetah
       pipe_stdout_read, pipe_stdout_write = IO.pipe
       pipe_stderr_read, pipe_stderr_write = IO.pipe
 
-      if logger
-        logger.add logger_level_info,
-          "Executing command #{command.inspect} with #{describe_args(args)}."
-        logger.add logger_level_info,
-          "Standard input: " + (stdin.empty? ? "(none)" : stdin)
-      end
+      
+      log.info "Executing command #{command.inspect} with #{describe_args(args)}."
+      log.info "Standard input: " + (stdin.empty? ? "(none)" : stdin)
 
       pid = fork do
         begin
@@ -252,14 +247,11 @@ module Cheetah
             "failed with status #{status.exitstatus}.")
         end
       ensure
-        if logger
-          logger.add status.success? ? logger_level_info : logger_level_error,
+        log.add status.success? ? :info : :error,
             "Status: #{status.exitstatus}"
-          logger.add logger_level_info,
-            "Standard output: " + (stdout.empty? ? "(none)" : stdout)
-          logger.add stderr.empty?  ? logger_level_info : logger_level_error,
-            "Error output: " + (stderr.empty? ? "(none)" : stderr)
-        end
+        log.info "Standard output: " + (stdout.empty? ? "(none)" : stdout)
+        log.add stderr.empty? ? :info : :error,
+            "Error output: " + (stderr.empty? ? "(none)" : stderr
       end
 
       case options[:capture]
@@ -276,11 +268,37 @@ module Cheetah
 
     private
 
+    class LoggerTransport
+      def initialize (options)
+        @logger = options[:logger]
+        @info_level = options[:logger_level_info]
+        @error_level = options[:logger_level_error]
+      end
+      
+      def info *args
+        return unless logger
+        @logger.add @info_level, *args
+      end
+      
+      def error *args
+        return unless logger
+        @logger.add @error_level, *args
+      end
+      
+      def add (level,*args)
+        send level,*args
+      end
+    end
+
     def describe_args(args)
       args.empty? ? "no arguments" : "arguments #{args.map(&:inspect).join(", ")}"
     end
   end
 
-  self.default_options = {}
+  self.default_options = {
+    :logger_level_info => Logger::INFO,
+    :logger_level_error] => Logger::ERROR,
+    :stdin => ""
+  }
 end
 
