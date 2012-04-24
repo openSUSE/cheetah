@@ -30,10 +30,7 @@ module Cheetah
 
   # Exception raised when a command execution fails.
   class ExecutionFailed < StandardError
-    # @return [String] the executed command
-    attr_reader :command
-
-    # @return [Array<String>] the executed command arguments
+    # @return [Array<Array<String>>] the cheetah arguments
     attr_reader :args
 
     # @return [Process::Status] the executed command exit status
@@ -47,15 +44,13 @@ module Cheetah
 
     # Initializes a new {ExecutionFailed} instance.
     #
-    # @param [String] command the executed command
-    # @param [Array<String>] args the executed command arguments
+    # @param [Array<Array>] Array of parameters send to cheetah
     # @param [Process::Status] status the executed command exit status
     # @param [String] stdout the output the executed command wrote to stdout
     # @param [String] stderr the output the executed command wrote to stderr
     # @param [String, nil] message the exception message
-    def initialize(command, args, status, stdout, stderr, message = nil)
+    def initialize(args, status, stdout, stderr, message = nil)
       super(message)
-      @command = command
       @args    = args
       @status  = status
       @stdout  = stdout
@@ -138,6 +133,16 @@ module Cheetah
     #   @param [Hash] options the options to execute the command with, same as
     #     in the first variant
     #
+    # @overload run(*command_and_args, options = {})
+    #   This variant is designated running more then one command joined together
+    #   with pipe.
+    #
+    #   @param [Array<String>] command_and_args the command to execute (first
+    #     element of the array) and its arguments (remaining elements)
+    #   @param [Hash] options the options to execute the command with, same as
+    #     in the first variant. Input goes to first command and captured is the
+    #     last command as expected.
+    #
     # @raise [ExecutionFailed] when the command can't be executed for some
     #   reason or returns a non-zero exit status
     #
@@ -165,7 +170,11 @@ module Cheetah
     #     puts "Standard output: #{e.stdout}"
     #     puts "Error ouptut:    #{e.stderr}"
     #   end
-    def run(command, *args)
+    #
+    #   @example Run two commands connected with pipe with result redirection to file. Example is real example for transfering big data over ssh to local file.
+    #     Cheetah.run(["ssh","tux@target.machine.com","bzip2 --stdout /data/incredible_huge_file"],
+    #         ["unbzip2"],:redirect_stdout => "/data/local_huge_file_copy")
+    def run(*args)
       options = args.last.is_a?(Hash) ? args.pop : {}
       options = @default_options.merge(options)
       #handle redirect to file
@@ -173,7 +182,7 @@ module Cheetah
         return File.open(options[:redirect_stdout],"w") do |f|
           options[:redirect_stdout] = f
           args << options #merge it back
-          run(command,*args)
+          run(*args)
         end
       end
 
@@ -182,9 +191,8 @@ module Cheetah
       logger_level_info  = options[:logger_level_info]  || Logger::INFO
       logger_level_error = options[:logger_level_error] || Logger::ERROR
 
-      if command.is_a?(Array)
-        args    = command[1..-1]
-        command = command.first
+      if !args.first.is_a?(Array) #single command
+        args    = [args]
       end
 
       pipe_stdin_read,  pipe_stdin_write  = IO.pipe
@@ -193,7 +201,7 @@ module Cheetah
 
       if logger
         logger.add logger_level_info,
-          "Executing command #{command.inspect} with #{describe_args(args)}."
+          "Executing command \"#{describe_command(args)}\""
         logger.add logger_level_info,
           "Standard input: " + (stdin.empty? ? "(none)" : stdin)
       end
@@ -205,7 +213,7 @@ module Cheetah
           pipe_stderr_read.close
           STDERR.reopen(pipe_stderr_write)
           pipe_stderr_write.close
-          CommandForker.run(pipe_stdin_read, pipe_stdout_write,[[command,args].flatten])
+          CommandForker.run(pipe_stdin_read, pipe_stdout_write,args)
         rescue SystemCallError => e
           exit!(127)
         end
@@ -263,9 +271,8 @@ module Cheetah
       pid, status = Process.wait2(pid)
       begin
         if !status.success?
-          raise ExecutionFailed.new(command, args, status, stdout, stderr,
-            "Execution of command #{command.inspect} " +
-            "with #{describe_args(args)} " +
+          raise ExecutionFailed.new(args, status, stdout, stderr,
+            "Execution of command \"#{describe_command(args)}\" " +
             "failed with status #{status.exitstatus}.")
         end
       ensure
@@ -289,128 +296,6 @@ module Cheetah
         when [:stdout, :stderr]
           [stdout, stderr]
       end
-    end
-
-    def run_piped(*args)
-      options = args.last.is_a?(Hash) ? args.pop : {}
-      options = @default_options.merge(options)
-      #handle redirect to file
-      if options[:redirect_stdout].is_a? String
-        return File.open(options[:redirect_stdout],"w") do |f|
-          options[:redirect_stdout] = f
-          args << options #merge it back
-          run_piped(*args)
-        end
-      end
-
-      stdin              = options[:stdin] || ""
-      logger             = options[:logger]
-      logger_level_info  = options[:logger_level_info]  || Logger::INFO
-      logger_level_error = options[:logger_level_error] || Logger::ERROR
-
-      pipe_stdin_read,  pipe_stdin_write  = IO.pipe
-      pipe_stdout_read, pipe_stdout_write = IO.pipe
-      pipe_stderr_read, pipe_stderr_write = IO.pipe
-
-      if logger
-        logger.add logger_level_info,
-          "Executing piped command #{args.inspect}." #FIXME refactor command description
-        logger.add logger_level_info,
-          "Standard input: " + (stdin.empty? ? "(none)" : stdin)
-      end
-
-      pid = fork do
-        begin
-          pipe_stdin_write.close
-          pipe_stdout_read.close
-          pipe_stderr_read.close
-          STDERR.reopen(pipe_stderr_write)
-          pipe_stderr_write.close #get stderr only from last command, we don't have enough pipes :)
-          CommandForker.run(pipe_stdin_read, pipe_stdout_write, args)
-        rescue SystemCallError => e
-          exit!(127)
-        end
-      end
-
-      [pipe_stdin_read, pipe_stdout_write, pipe_stderr_write].each { |p| p.close }
-
-      # We write the command's input and read its output using a select loop.
-      # Why? Because otherwise we could end up with a deadlock.
-      #
-      # Imagine if we first read the whole standard output and then the whole
-      # error output, but the executed command would write lot of data but only
-      # to the error output. Sooner or later it would fill the buffer and block,
-      # while we would be blocked on reading the standard output -- classic
-      # deadlock.
-      #
-      # Similar issues can happen with standard input vs. one of the outputs.
-      outputs = { 
-        pipe_stdout_read => options[:redirect_stdout] || "",
-        pipe_stderr_read => ""
-      }
-      pipes_readable = [pipe_stdout_read, pipe_stderr_read]
-      pipes_writable = [pipe_stdin_write]
-      loop do
-        pipes_readable.reject!(&:closed?)
-        pipes_writable.reject!(&:closed?)
-
-        break if pipes_readable.empty? && pipes_writable.empty?
-
-        ios_read, ios_write, ios_error = select(pipes_readable, pipes_writable,
-          pipes_readable + pipes_writable)
-
-        if !ios_error.empty?
-          raise IOError, "Error when communicating with executed program."
-        end
-
-        ios_read.each do |pipe|
-          begin
-            outputs[pipe] << pipe.readpartial(4096)
-          rescue EOFError
-            pipe.close
-          end
-        end
-
-        ios_write.each do |pipe|
-          n = pipe.syswrite(stdin)
-          stdin = stdin[n..-1]
-          pipe.close if stdin.empty?
-        end
-      end
-
-      stdout = outputs[pipe_stdout_read]
-      stderr = outputs[pipe_stderr_read]
-
-      pid, status = Process.wait2(pid)
-      begin
-        if !status.success?
-          raise ExecutionFailed.new(args.first.first, args, status, stdout, stderr,
-            "Execution of command #{args.first.first.inspect} " +
-            "with #{describe_args(args)} " +
-            "failed with status #{status.exitstatus}.")
-        end
-      ensure
-        if logger
-          logger.add status.success? ? logger_level_info : logger_level_error,
-            "Status: #{status.exitstatus}"
-          logger.add logger_level_info,
-            "Standard output: " + (stdout.empty? ? "(none)" : stdout)
-          logger.add stderr.empty?  ? logger_level_info : logger_level_error,
-            "Error output: " + (stderr.empty? ? "(none)" : stderr)
-        end
-      end
-
-      case options[:capture]
-        when nil
-          nil
-        when :stdout
-          stdout
-        when :stderr
-          stderr
-        when [:stdout, :stderr]
-          [stdout, stderr]
-      end
-
     end
 
     private
@@ -428,7 +313,6 @@ module Cheetah
           outpipe.close
           
           if args.size > 1
-          File.open("/tmp/test","a") {|f| f.puts "args is big enough #{args[0..-2].inspect}" }
             fork do
               begin
                 STDERR.close unless STDERR.closed? #we capture stderr only from last command, fixes welcome if it not add lot of pipes
@@ -444,8 +328,14 @@ module Cheetah
         end
       end
     end
-    def describe_args(args)
-      args.empty? ? "no arguments" : "arguments #{args.map(&:inspect).join(", ")}"
+    
+    def describe_command(args)
+      result = args.map do |arg|
+        arg[1..-1].reduce(arg.first) do |acc,i|
+          acc + " '#{i}'"
+        end
+      end
+      result.join(" | ")
     end
   end
 

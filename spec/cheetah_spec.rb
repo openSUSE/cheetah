@@ -188,7 +188,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run("/bin/true", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing command "/bin/true" with no arguments.
+          INFO Executing command "/bin/true"
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: (none)
@@ -200,7 +200,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run("/bin/true", "foo", "bar", "baz", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing command "/bin/true" with arguments "foo", "bar", "baz".
+          INFO Executing command "/bin/true 'foo' 'bar' 'baz'"
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: (none)
@@ -217,7 +217,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run(command, :stdin => "", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing command "#@tmp_dir/command" with no arguments.
+          INFO Executing command "#@tmp_dir/command"
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: (none)
@@ -232,7 +232,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run(command, :stdin => "blah", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing command "#@tmp_dir/command" with no arguments.
+          INFO Executing command "#@tmp_dir/command"
           INFO Standard input: blah
           INFO Status: 0
           INFO Standard output: output
@@ -248,7 +248,7 @@ describe Cheetah do
             # Eat it.
           end
         }.should log(<<-EOT)
-          INFO Executing command "/bin/false" with no arguments.
+          INFO Executing command "/bin/false"
           INFO Standard input: (none)
           ERROR Status: 1
           INFO Standard output: (none)
@@ -260,7 +260,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run("/bin/true", :logger => logger, :logger_level_info => Logger::DEBUG)
         }.should log(<<-EOT)
-          DEBUG Executing command "/bin/true" with no arguments.
+          DEBUG Executing command "/bin/true"
           DEBUG Standard input: (none)
           DEBUG Status: 0
           DEBUG Standard output: (none)
@@ -276,7 +276,7 @@ describe Cheetah do
             # Eat it.
           end
         }.should log(<<-EOT)
-          INFO Executing command "/bin/false" with no arguments.
+          INFO Executing command "/bin/false"
           INFO Standard input: (none)
           WARN Status: 1
           INFO Standard output: (none)
@@ -319,8 +319,7 @@ describe Cheetah do
           lambda {
             Cheetah.run("unknown", "foo", "bar", "baz")
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
-            e.command.should          == "unknown"
-            e.args.should             == ["foo", "bar", "baz"]
+            e.args.should              == [["unknown","foo", "bar", "baz"]]
             e.status.exitstatus.should == 127
           }
         end
@@ -329,8 +328,7 @@ describe Cheetah do
           lambda {
             Cheetah.run("/bin/false", "foo", "bar", "baz")
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
-            e.command.should          == "/bin/false"
-            e.args.should             == ["foo", "bar", "baz"]
+            e.args.should             == [["/bin/false","foo", "bar", "baz"]]
             e.status.exitstatus.should == 1
           }
         end
@@ -342,7 +340,7 @@ describe Cheetah do
             Cheetah.run("/bin/false")
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.message.should ==
-              "Execution of command \"/bin/false\" with no arguments failed with status 1."
+              "Execution of command \"/bin/false\" failed with status 1."
           }
         end
 
@@ -351,7 +349,7 @@ describe Cheetah do
             Cheetah.run("/bin/false", "foo", "bar", "baz")
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.message.should ==
-              "Execution of command \"/bin/false\" with arguments \"foo\", \"bar\", \"baz\" failed with status 1."
+              "Execution of command \"/bin/false 'foo' 'bar' 'baz'\" failed with status 1."
           }
         end
       end
@@ -442,14 +440,14 @@ describe Cheetah do
         it "Simple run of two commands correctly" do
           test_string = "my big feature"
           expected_output = "my small feature"
-          result = Cheetah.run_piped(["/bin/echo",test_string],["sed","s/big/small/"],:capture => :stdout)
+          result = Cheetah.run(["/bin/echo",test_string],["sed","s/big/small/"],:capture => :stdout)
           result.chomp.should == expected_output
         end
 
         it "run piped with given stdin" do
           test_string = "my big feature"
           expected_output = "my small bug"
-          result = Cheetah.run_piped(["sed","s/feature/bug/"],["sed","s/big/small/"],:capture => :stdout, :stdin => test_string )
+          result = Cheetah.run(["sed","s/feature/bug/"],["sed","s/big/small/"],:capture => :stdout, :stdin => test_string )
           result.should == expected_output
         end
       end
