@@ -30,10 +30,7 @@ module Cheetah
 
   # Exception raised when a command execution fails.
   class ExecutionFailed < StandardError
-    # @return [String] the executed command
-    attr_reader :command
-
-    # @return [Array<String>] the executed command arguments
+    # @return [Array<Array<String>>] the cheetah arguments
     attr_reader :args
 
     # @return [Process::Status] the executed command exit status
@@ -47,15 +44,13 @@ module Cheetah
 
     # Initializes a new {ExecutionFailed} instance.
     #
-    # @param [String] command the executed command
-    # @param [Array<String>] args the executed command arguments
+    # @param [Array<Array>] Array of parameters send to cheetah
     # @param [Process::Status] status the executed command exit status
     # @param [String] stdout the output the executed command wrote to stdout
     # @param [String] stderr the output the executed command wrote to stderr
     # @param [String, nil] message the exception message
-    def initialize(command, args, status, stdout, stderr, message = nil)
+    def initialize(args, status, stdout, stderr, message = nil)
       super(message)
-      @command = command
       @args    = args
       @status  = status
       @stdout  = stdout
@@ -110,6 +105,10 @@ module Cheetah
     #   @param [Array<String>] args the command arguments
     #   @param [Hash] options the options to execute the command with
     #   @option options [String] :stdin ('') command's input
+    #   @option options [String,IO] :redirect_stdout (nil) redirect stdout to 
+    #     target. If parameter is IO, then write to it. If it is string, then 
+    #     open it as file and write there. Redirected stdout means, that stdout
+    #     is not logged or captured.
     #   @option options [String] :capture (nil) configures which output(s) to
     #     capture, the valid values are:
     #
@@ -134,11 +133,34 @@ module Cheetah
     #   @param [Hash] options the options to execute the command with, same as
     #     in the first variant
     #
+    # @overload run(*command_and_args, options = {})
+    #   This variant is designated running more then one command joined together
+    #   with pipe.
+    #
+    #   @param [Array<String>] command_and_args the command to execute (first
+    #     element of the array) and its arguments (remaining elements)
+    #   @param [Hash] options the options to execute the command with, same as
+    #     in the first variant. Input goes to first command and captured is the
+    #     last command as expected.
+    #
     # @raise [ExecutionFailed] when the command can't be executed for some
     #   reason or returns a non-zero exit status
     #
     # @example Run a command and capture its output
     #   files = Cheetah.run("ls", "-la", :capture => :stdout)
+    #
+    # @example Run a command and redirect its output to file
+    #   Cheetah.run("xzdec", "test.txt.xz", :redirect_stdout => "test.txt")
+    #
+    # @example Run a command and redirect its output to stream
+    #   begin
+    #     File.open("test.txt","w") do |f|
+    #       Cheetah.run("xzdec", "test.txt.xz", :redirect_stdout => "test.txt")
+    #     end
+    #   rescue Cheetah::ExecutionFailed
+    #     #ensure that we clean output if command failed
+    #     FileUtils.rm "test.txt" if File.exists? "test.txt"
+    #   end
     #
     # @example Run a command and handle errors
     #   begin
@@ -148,18 +170,29 @@ module Cheetah
     #     puts "Standard output: #{e.stdout}"
     #     puts "Error ouptut:    #{e.stderr}"
     #   end
-    def run(command, *args)
+    #
+    #   @example Run two commands connected with pipe with result redirection to file. Example is real example for transfering big data over ssh to local file.
+    #     Cheetah.run(["ssh","tux@target.machine.com","bzip2 --stdout /data/incredible_huge_file"],
+    #         ["unbzip2"],:redirect_stdout => "/data/local_huge_file_copy")
+    def run(*args)
       options = args.last.is_a?(Hash) ? args.pop : {}
       options = @default_options.merge(options)
+      #handle redirect to file
+      if options[:redirect_stdout].is_a? String
+        return File.open(options[:redirect_stdout],"w") do |f|
+          options[:redirect_stdout] = f
+          args << options #merge it back
+          run(*args)
+        end
+      end
 
       stdin              = options[:stdin] || ""
       logger             = options[:logger]
       logger_level_info  = options[:logger_level_info]  || Logger::INFO
       logger_level_error = options[:logger_level_error] || Logger::ERROR
 
-      if command.is_a?(Array)
-        args    = command[1..-1]
-        command = command.first
+      if !args.first.is_a?(Array) #single command
+        args    = [args]
       end
 
       pipe_stdin_read,  pipe_stdin_write  = IO.pipe
@@ -168,7 +201,7 @@ module Cheetah
 
       if logger
         logger.add logger_level_info,
-          "Executing command #{command.inspect} with #{describe_args(args)}."
+          "Executing command \"#{describe_command(args)}\""
         logger.add logger_level_info,
           "Standard input: " + (stdin.empty? ? "(none)" : stdin)
       end
@@ -176,22 +209,11 @@ module Cheetah
       pid = fork do
         begin
           pipe_stdin_write.close
-          STDIN.reopen(pipe_stdin_read)
-          pipe_stdin_read.close
-
           pipe_stdout_read.close
-          STDOUT.reopen(pipe_stdout_write)
-          pipe_stdout_write.close
-
           pipe_stderr_read.close
           STDERR.reopen(pipe_stderr_write)
           pipe_stderr_write.close
-
-          # All file descriptors from 3 above should be closed here, but since I
-          # don't know about any way how to detect the maximum file descriptor
-          # number portably in Ruby, I didn't implement it. Patches welcome.
-
-          exec([command, command], *args)
+          CommandForker.run(pipe_stdin_read, pipe_stdout_write,args)
         rescue SystemCallError => e
           exit!(127)
         end
@@ -209,7 +231,10 @@ module Cheetah
       # deadlock.
       #
       # Similar issues can happen with standard input vs. one of the outputs.
-      outputs = { pipe_stdout_read => "", pipe_stderr_read => "" }
+      outputs = { 
+        pipe_stdout_read => options[:redirect_stdout] || "",
+        pipe_stderr_read => ""
+      }
       pipes_readable = [pipe_stdout_read, pipe_stderr_read]
       pipes_writable = [pipe_stdin_write]
       loop do
@@ -246,9 +271,8 @@ module Cheetah
       pid, status = Process.wait2(pid)
       begin
         if !status.success?
-          raise ExecutionFailed.new(command, args, status, stdout, stderr,
-            "Execution of command #{command.inspect} " +
-            "with #{describe_args(args)} " +
+          raise ExecutionFailed.new(args, status, stdout, stderr,
+            "Execution of command \"#{describe_command(args)}\" " +
             "failed with status #{status.exitstatus}.")
         end
       ensure
@@ -275,9 +299,43 @@ module Cheetah
     end
 
     private
-
-    def describe_args(args)
-      args.empty? ? "no arguments" : "arguments #{args.map(&:inspect).join(", ")}"
+    class CommandForker
+      class << self
+        def run(inpipe,outpipe,args)
+          new_outpipe = outpipe
+          my_inpipe = inpipe
+          if args.size > 1 # we need pipeing
+            my_inpipe, new_outpipe = IO.pipe
+          end
+          STDIN.reopen(my_inpipe)
+          my_inpipe.close
+          STDOUT.reopen(outpipe)
+          outpipe.close
+          
+          if args.size > 1
+            fork do
+              begin
+                STDERR.close unless STDERR.closed? #we capture stderr only from last command, fixes welcome if it not add lot of pipes
+                CommandForker.run(inpipe,new_outpipe,args[0..-2])
+              rescue SystemCallError => e
+                exit!(127)
+              end
+            end
+          end
+          new_outpipe.close unless new_outpipe.closed?
+          my_args = args.last
+          exec([my_args.first, my_args.first], *my_args[1..-1])
+        end
+      end
+    end
+    
+    def describe_command(args)
+      result = args.map do |arg|
+        arg[1..-1].reduce(arg.first) do |acc,i|
+          acc + " '#{i}'"
+        end
+      end
+      result.join(" | ")
     end
   end
 
