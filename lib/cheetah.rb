@@ -205,7 +205,7 @@ module Cheetah
           pipe_stderr_read.close
           STDERR.reopen(pipe_stderr_write)
           pipe_stderr_write.close
-          CommandForker.run(pipe_stdin_read, pipe_stdout_write,[command,args].flatten)
+          CommandForker.run(pipe_stdin_read, pipe_stdout_write,[[command,args].flatten])
         rescue SystemCallError => e
           exit!(127)
         end
@@ -384,8 +384,8 @@ module Cheetah
       pid, status = Process.wait2(pid)
       begin
         if !status.success?
-          raise ExecutionFailed.new(command, args, status, stdout, stderr,
-            "Execution of command #{command.inspect} " +
+          raise ExecutionFailed.new(args.first.first, args, status, stdout, stderr,
+            "Execution of command #{args.first.first.inspect} " +
             "with #{describe_args(args)} " +
             "failed with status #{status.exitstatus}.")
         end
@@ -416,7 +416,7 @@ module Cheetah
     private
     class CommandForker
       class << self
-        def run(inpipe,outpipe,*args)
+        def run(inpipe,outpipe,args)
           new_outpipe = outpipe
           my_inpipe = inpipe
           if args.size > 1 # we need pipeing
@@ -428,10 +428,10 @@ module Cheetah
           outpipe.close
           
           if args.size > 1
+          File.open("/tmp/test","a") {|f| f.puts "args is big enough #{args[0..-2].inspect}" }
             fork do
               begin
                 STDERR.close unless STDERR.closed? #we capture stderr only from last command, fixes welcome if it not add lot of pipes
-                my_inpipe.close
                 CommandForker.run(inpipe,new_outpipe,args[0..-2])
               rescue SystemCallError => e
                 exit!(127)

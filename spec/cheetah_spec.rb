@@ -437,6 +437,22 @@ describe Cheetah do
           File.read(test_output).should == test_string+"\n" #echo add new line character
         end
       end
+
+      describe "Pipeing" do
+        it "Simple run of two commands correctly" do
+          test_string = "my big feature"
+          expected_output = "my small feature"
+          result = Cheetah.run_piped(["/bin/echo",test_string],["sed","s/big/small/"],:capture => :stdout)
+          result.chomp.should == expected_output
+        end
+
+        it "run piped with given stdin" do
+          test_string = "my big feature"
+          expected_output = "my small bug"
+          result = Cheetah.run_piped(["sed","s/feature/bug/"],["sed","s/big/small/"],:capture => :stdout, :stdin => test_string )
+          result.should == expected_output
+        end
+      end
     end
   end
 end
