@@ -137,7 +137,8 @@ module Cheetah
     #   @param [String] command the command to execute
     #   @param [Array<String>] args the command arguments
     #   @param [Hash] options the options to execute the command with
-    #   @option options [String] :stdin ('') command's input
+    #   @option options [String, IO] :stdin ('') a `String` to use as command's
+    #     standard input or an `IO` to read it from
     #   @option options [String, nil] :stdout (nil) if set to `:capture`,
     #     capture command's standard output and return it as a string (or as the
     #     first element of a two-element array of strings if the `:stderr`
@@ -180,7 +181,12 @@ module Cheetah
       options = args.last.is_a?(Hash) ? args.pop : {}
       options = BUILTIN_DEFAULT_OPTIONS.merge(@default_options).merge(options)
 
-      stdin  = options[:stdin]
+      stdin = if options[:stdin].is_a?(String)
+        StringIO.new(options[:stdin])
+      else
+        options[:stdin]
+      end
+
       logger = LogAdapter.new(options[:logger],
         options[:logger_level_info],
         options[:logger_level_error])
@@ -195,7 +201,10 @@ module Cheetah
       pipe_stderr_read, pipe_stderr_write = IO.pipe
 
       logger.info "Executing command #{command.inspect} with #{describe_args(args)}."
-      logger.info "Standard input: " + (stdin.empty? ? "(none)" : stdin)
+      if options[:stdin].is_a?(String)
+        logger.info "Standard input: " +
+          (options[:stdin].empty? ? "(none)" : options[:stdin])
+      end
 
       pid = fork do
         begin
@@ -233,6 +242,7 @@ module Cheetah
       # deadlock.
       #
       # Similar issues can happen with standard input vs. one of the outputs.
+      stdin_buffer = ""
       outputs = { pipe_stdout_read => "", pipe_stderr_read => "" }
       pipes_readable = [pipe_stdout_read, pipe_stderr_read]
       pipes_writable = [pipe_stdin_write]
@@ -258,9 +268,14 @@ module Cheetah
         end
 
         ios_write.each do |pipe|
-          n = pipe.syswrite(stdin)
-          stdin = stdin[n..-1]
-          pipe.close if stdin.empty?
+          stdin_buffer = stdin.read(4096) if stdin_buffer.empty?
+          if !stdin_buffer
+            pipe.close
+            next
+          end
+
+          n = pipe.syswrite(stdin_buffer)
+          stdin_buffer = stdin_buffer[n..-1]
         end
       end
 

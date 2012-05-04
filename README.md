@@ -55,8 +55,13 @@ You can now use the `Cheetah.run` method to run commands, pass them an input and
 # Run a command with arguments
 Cheetah.run("tar", "xzf", "foo.tar.gz")
 
-# Pass an input
+# Pass an input (as a string)
 Cheetah.run("python", :stdin => source_code)
+
+# Pass an input (as a stream)
+File.open("huge_program.py") do |stdin|
+  Cheetah.run("python", :stdin => stdin)
+end
 
 # Capture standard output
 files = Cheetah.run("ls", "-la", :stdout => :capture)

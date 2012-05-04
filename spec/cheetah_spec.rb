@@ -96,9 +96,18 @@ describe Cheetah do
         end
       end
 
-      it "passes :stdin option value to standard input" do
+      it "reads standard input from :stdin when set to a string" do
         Cheetah.run("cat", :stdin => "",      :stdout => :capture).should == ""
         Cheetah.run("cat", :stdin => "input", :stdout => :capture).should == "input"
+      end
+
+      it "reads standard input from :stdin when set to an IO" do
+        StringIO.open("") do |stdin|
+          Cheetah.run("cat", :stdin => stdin, :stdout => :capture).should == ""
+        end
+        StringIO.open("input") do |stdin|
+          Cheetah.run("cat", :stdin => stdin, :stdout => :capture).should == "input"
+        end
       end
     end
 
@@ -212,7 +221,7 @@ describe Cheetah do
         EOT
       end
 
-      it "logs a successful execution of a command doing I/O" do
+      it "logs a successful execution of a command producing output" do
         command = create_command(<<-EOT)
           echo -n ''
           echo -n '' 1>&2
@@ -242,6 +251,64 @@ describe Cheetah do
           INFO Standard output: output
           ERROR Error output: error
         EOT
+      end
+
+      it "logs standard input with no :stdin option" do
+        lambda { |logger|
+          Cheetah.run("/bin/true", :logger => logger)
+        }.should log(<<-EOT)
+          INFO Executing command "/bin/true" with no arguments.
+          INFO Standard input: (none)
+          INFO Status: 0
+          INFO Standard output: (none)
+          INFO Error output: (none)
+        EOT
+      end
+
+      it "logs standard input with :stdin set to a string" do
+        lambda { |logger|
+          Cheetah.run("/bin/true", :stdin => "", :logger => logger)
+        }.should log(<<-EOT)
+          INFO Executing command "/bin/true" with no arguments.
+          INFO Standard input: (none)
+          INFO Status: 0
+          INFO Standard output: (none)
+          INFO Error output: (none)
+        EOT
+
+        lambda { |logger|
+          Cheetah.run("/bin/true", :stdin => "blah", :logger => logger)
+        }.should log(<<-EOT)
+          INFO Executing command "/bin/true" with no arguments.
+          INFO Standard input: blah
+          INFO Status: 0
+          INFO Standard output: (none)
+          INFO Error output: (none)
+        EOT
+      end
+
+      it "logs standard input with :stdin set to an IO" do
+        StringIO.open("") do |stdin|
+          lambda { |logger|
+            Cheetah.run("/bin/true", :stdin => stdin, :logger => logger)
+          }.should log(<<-EOT)
+            INFO Executing command "/bin/true" with no arguments.
+            INFO Status: 0
+            INFO Standard output: (none)
+            INFO Error output: (none)
+          EOT
+        end
+
+        StringIO.open("blah") do |stdin|
+          lambda { |logger|
+            Cheetah.run("/bin/true", :stdin => stdin, :logger => logger)
+          }.should log(<<-EOT)
+            INFO Executing command "/bin/true" with no arguments.
+            INFO Status: 0
+            INFO Standard output: (none)
+            INFO Error output: (none)
+          EOT
+        end
       end
 
       it "logs an unsuccessful execution of a command" do
