@@ -1,3 +1,5 @@
+require "logger"
+
 # A simple library for executing external commands safely and conveniently.
 #
 # ## Features
