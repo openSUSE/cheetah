@@ -63,6 +63,21 @@ module Cheetah
     end
   end
 
+  # @private
+  class LogAdapter
+    def initialize(logger, level_info, level_error)
+      @logger, @level_info, @level_error = logger, level_info, level_error
+    end
+
+    def info(message)
+      @logger.add(@level_info, message) if @logger
+    end
+
+    def error(message)
+      @logger.add(@level_error, message) if @logger
+    end
+  end
+
   class << self
     # The default options of the {Cheetah.run} method. Values of options not
     # specified in its `options` parameter are taken from here. If a value is
@@ -152,10 +167,10 @@ module Cheetah
       options = args.last.is_a?(Hash) ? args.pop : {}
       options = @default_options.merge(options)
 
-      stdin              = options[:stdin] || ""
-      logger             = options[:logger]
-      logger_level_info  = options[:logger_level_info]  || Logger::INFO
-      logger_level_error = options[:logger_level_error] || Logger::ERROR
+      stdin  = options[:stdin] || ""
+      logger = LogAdapter.new(options[:logger],
+        options[:logger_level_info]  || Logger::INFO,
+        options[:logger_level_error] || Logger::ERROR)
 
       if command.is_a?(Array)
         args    = command[1..-1]
@@ -166,12 +181,8 @@ module Cheetah
       pipe_stdout_read, pipe_stdout_write = IO.pipe
       pipe_stderr_read, pipe_stderr_write = IO.pipe
 
-      if logger
-        logger.add logger_level_info,
-          "Executing command #{command.inspect} with #{describe_args(args)}."
-        logger.add logger_level_info,
-          "Standard input: " + (stdin.empty? ? "(none)" : stdin)
-      end
+      logger.info "Executing command #{command.inspect} with #{describe_args(args)}."
+      logger.info "Standard input: " + (stdin.empty? ? "(none)" : stdin)
 
       pid = fork do
         begin
@@ -252,14 +263,11 @@ module Cheetah
             "failed with status #{status.exitstatus}.")
         end
       ensure
-        if logger
-          logger.add status.success? ? logger_level_info : logger_level_error,
-            "Status: #{status.exitstatus}"
-          logger.add logger_level_info,
-            "Standard output: " + (stdout.empty? ? "(none)" : stdout)
-          logger.add stderr.empty?  ? logger_level_info : logger_level_error,
-            "Error output: " + (stderr.empty? ? "(none)" : stderr)
-        end
+        logger.send status.success? ? :info : :error,
+          "Status: #{status.exitstatus}"
+        logger.info "Standard output: " + (stdout.empty? ? "(none)" : stdout)
+        logger.send stderr.empty? ? :info : :error,
+          "Error output: " + (stderr.empty? ? "(none)" : stderr)
       end
 
       case options[:capture]
