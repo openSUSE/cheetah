@@ -8,7 +8,7 @@ Examples
 
 ```ruby
 # Run a command and capture its output
-files = Cheetah.run("ls", "-la", :capture => :stdout)
+files = Cheetah.run("ls", "-la", :stdout => :capture)
 
 # Run a command and handle errors
 begin
@@ -59,10 +59,10 @@ Cheetah.run("tar", "xzf", "foo.tar.gz")
 Cheetah.run("python", :stdin => source_code)
 
 # Capture standard output
-files = Cheetah.run("ls", "-la", :capture => :stdout)
+files = Cheetah.run("ls", "-la", :stdout => :capture)
 
 # Capture both standard and error output
-results, errors = Cheetah.run("grep", "-r", "User", ".", :capture => [:stdout, :stderr))
+results, errors = Cheetah.run("grep", "-r", "User", ".", :stdout => :capture, :stderr => :capture)
 ```
 
 If the command can't be executed for some reason or returns a non-zero exit status, the method raises an exception with detailed information about the failure:

@@ -14,7 +14,7 @@
 #   * Handling of interactive commands
 #
 # @example Run a command and capture its output
-#   files = Cheetah.run("ls", "-la", :capture => :stdout)
+#   files = Cheetah.run("ls", "-la", :stdout => :capture)
 #
 # @example Run a command and handle errors
 #   begin
@@ -81,7 +81,8 @@ module Cheetah
   # @private
   BUILTIN_DEFAULT_OPTIONS = {
     :stdin              => "",
-    :capture            => nil,
+    :stdout             => nil,
+    :stderr             => nil,
     :logger             => nil,
     :logger_level_info  => Logger::INFO,
     :logger_level_error => Logger::ERROR
@@ -109,9 +110,10 @@ module Cheetah
     # an input and capturing its output.
     #
     # If the command execution succeeds, the returned value depends on the value
-    # of the `:capture` option (see below). If the command can't be executed for
-    # some reason or returns a non-zero exit status, the method raises an
-    # {ExecutionFailed} exception with detailed information about the failure.
+    # of the `:stdout` and `:stderr` options (see below). If the command can't
+    # be executed for some reason or returns a non-zero exit status, the method
+    # raises an {ExecutionFailed} exception with detailed information about the
+    # failure.
     #
     # The command and its arguments never undergo shell expansion — they are
     # passed directly to the operating system. While this may create some
@@ -134,14 +136,14 @@ module Cheetah
     #   @param [Array<String>] args the command arguments
     #   @param [Hash] options the options to execute the command with
     #   @option options [String] :stdin ('') command's input
-    #   @option options [String] :capture (nil) configures which output(s) to
-    #     capture, the valid values are:
-    #
-    #       * `nil` — no output is captured and returned
-    #       * `:stdout` — standard output is captured and returned as a string
-    #       * `:stderr` — error output is captured and returned as a string
-    #       * `[:stdout, :stderr]` — both outputs are captured and returned as a
-    #         two-element array of strings
+    #   @option options [String, nil] :stdout (nil) if set to `:capture`,
+    #     capture command's standard output and return it as a string (or as the
+    #     first element of a two-element array of strings if the `:stderr`
+    #     option is set to `:capture` too)
+    #   @option options [String, nil] :stderr (nil) if set to `:capture`,
+    #     capture command's error output and return it as a string (or as the
+    #     second element of a two-element array of strings if the `:stdout`
+    #     option is set to `:capture` too)
     #   @option options [Logger, nil] :logger (nil) logger to log the command
     #     execution
     #   @option options [Integer] :logger_level_info (Logger::INFO) level for
@@ -162,7 +164,7 @@ module Cheetah
     #   reason or returns a non-zero exit status
     #
     # @example Run a command and capture its output
-    #   files = Cheetah.run("ls", "-la", :capture => :stdout)
+    #   files = Cheetah.run("ls", "-la", :stdout => capture)
     #
     # @example Run a command and handle errors
     #   begin
@@ -279,14 +281,14 @@ module Cheetah
           "Error output: " + (stderr.empty? ? "(none)" : stderr)
       end
 
-      case options[:capture]
-        when nil
+      case [options[:stdout] == :capture, options[:stderr] == :capture]
+        when [false, false]
           nil
-        when :stdout
+        when [true, false]
           stdout
-        when :stderr
+        when [false, true]
           stderr
-        when [:stdout, :stderr]
+        when [true, true]
           [stdout, stderr]
       end
     end
