@@ -369,54 +369,9 @@ describe Cheetah do
           EOT
         end
 
-        it "raises an exception with both stdout and stderr not set with no :stdout and :stderr options" do
+        it "raises an exception with both stdout and stderr set" do
           lambda {
             Cheetah.run(@command)
-          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
-            e.stdout.should == "output"
-            e.stderr.should == "error"
-          }
-        end
-
-        it "raises an exception with both stdout and stderr not set with :stdout => nil" do
-          lambda {
-            Cheetah.run(@command, :stdout => nil)
-          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
-            e.stdout.should == "output"
-            e.stderr.should == "error"
-          }
-        end
-
-        it "raises an exception with both stdout and stderr not set with :stderr => nil" do
-          lambda {
-            Cheetah.run(@command, :stderr => nil)
-          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
-            e.stdout.should == "output"
-            e.stderr.should == "error"
-          }
-        end
-
-        it "raises an exception with only stdout set with :stdout => :capture" do
-          lambda {
-            Cheetah.run(@command, :stdout => :capture)
-          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
-            e.stdout.should == "output"
-            e.stderr.should == "error"
-          }
-        end
-
-        it "raises an exception with only stderr set with :stderr => :capture" do
-          lambda {
-            Cheetah.run(@command, :stderr => :capture)
-          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
-            e.stdout.should == "output"
-            e.stderr.should == "error"
-          }
-        end
-
-        it "raises an exception with both stdout and stderr set with :stdout => :capture and :stderr => :capture" do
-          lambda {
-            Cheetah.run(@command, :stdout => :capture, :stderr => :capture)
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.stdout.should == "output"
             e.stderr.should == "error"
