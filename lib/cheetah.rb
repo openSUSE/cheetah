@@ -78,6 +78,15 @@ module Cheetah
     end
   end
 
+  # @private
+  BUILTIN_DEFAULT_OPTIONS = {
+    :stdin              => "",
+    :capture            => nil,
+    :logger             => nil,
+    :logger_level_info  => Logger::INFO,
+    :logger_level_error => Logger::ERROR
+  }
+
   class << self
     # The default options of the {Cheetah.run} method. Values of options not
     # specified in its `options` parameter are taken from here. If a value is
@@ -165,12 +174,12 @@ module Cheetah
     #   end
     def run(command, *args)
       options = args.last.is_a?(Hash) ? args.pop : {}
-      options = @default_options.merge(options)
+      options = BUILTIN_DEFAULT_OPTIONS.merge(@default_options).merge(options)
 
-      stdin  = options[:stdin] || ""
+      stdin  = options[:stdin]
       logger = LogAdapter.new(options[:logger],
-        options[:logger_level_info]  || Logger::INFO,
-        options[:logger_level_error] || Logger::ERROR)
+        options[:logger_level_info],
+        options[:logger_level_error])
 
       if command.is_a?(Array)
         args    = command[1..-1]
