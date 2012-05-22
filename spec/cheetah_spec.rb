@@ -183,7 +183,7 @@ describe Cheetah do
         Cheetah.run(@command, :stdout => :capture, :stderr => :capture).should == ["output", "error"]
       end
 
-      it "handles commands that output nothing correctly" do
+      it "handles commands that output nothing correctly with :stdout => :capture and :stderr => :capture" do
         Cheetah.run("/bin/true", :stdout => :capture, :stderr => :capture).should == ["", ""]
       end
     end
