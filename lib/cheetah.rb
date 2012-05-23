@@ -231,29 +231,7 @@ module Cheetah
 
       pipes = { :stdin => IO.pipe, :stdout => IO.pipe, :stderr => IO.pipe }
 
-      pid = fork do
-        begin
-          pipes[:stdin][WRITE].close
-          STDIN.reopen(pipes[:stdin][READ])
-          pipes[:stdin][READ].close
-
-          pipes[:stdout][READ].close
-          STDOUT.reopen(pipes[:stdout][WRITE])
-          pipes[:stdout][WRITE].close
-
-          pipes[:stderr][READ].close
-          STDERR.reopen(pipes[:stderr][WRITE])
-          pipes[:stderr][WRITE].close
-
-          # All file descriptors from 3 above should be closed here, but since I
-          # don't know about any way how to detect the maximum file descriptor
-          # number portably in Ruby, I didn't implement it. Patches welcome.
-
-          exec([command, command], *args)
-        rescue SystemCallError => e
-          exit!(127)
-        end
-      end
+      pid = fork_command(command, args, pipes)
 
       [
         pipes[:stdin][READ],
@@ -347,6 +325,32 @@ module Cheetah
     end
 
     private
+
+    def fork_command(command, args, pipes)
+      pid = fork do
+        begin
+          pipes[:stdin][WRITE].close
+          STDIN.reopen(pipes[:stdin][READ])
+          pipes[:stdin][READ].close
+
+          pipes[:stdout][READ].close
+          STDOUT.reopen(pipes[:stdout][WRITE])
+          pipes[:stdout][WRITE].close
+
+          pipes[:stderr][READ].close
+          STDERR.reopen(pipes[:stderr][WRITE])
+          pipes[:stderr][WRITE].close
+
+          # All file descriptors from 3 above should be closed here, but since I
+          # don't know about any way how to detect the maximum file descriptor
+          # number portably in Ruby, I didn't implement it. Patches welcome.
+
+          exec([command, command], *args)
+        rescue SystemCallError => e
+          exit!(127)
+        end
+      end
+    end
 
     def format_command(command, args)
       "\"#{Shellwords.join([command] + args)}\""
