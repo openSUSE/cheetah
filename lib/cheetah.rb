@@ -1,4 +1,5 @@
 require "logger"
+require "shellwords"
 
 # A simple library for executing external commands safely and conveniently.
 #
@@ -218,7 +219,7 @@ module Cheetah
         command = command.first
       end
 
-      logger.info "Executing command #{command.inspect} with #{describe_args(args)}."
+      logger.info "Executing command #{format_command(command, args)}."
       if options[:stdin].is_a?(String)
         logger.info "Standard input: " +
           (options[:stdin].empty? ? "(none)" : options[:stdin])
@@ -310,8 +311,7 @@ module Cheetah
             status,
             streaming_stdout ? nil : stdout.string,
             streaming_stderr ? nil : stderr.string,
-            "Execution of command #{command.inspect} " +
-              "with #{describe_args(args)} " +
+            "Execution of command #{format_command(command, args)} " +
               "failed with status #{status.exitstatus}."
           )
         end
@@ -342,8 +342,8 @@ module Cheetah
 
     private
 
-    def describe_args(args)
-      args.empty? ? "no arguments" : "arguments #{args.map(&:inspect).join(", ")}"
+    def format_command(command, args)
+      "\"#{Shellwords.join([command] + args)}\""
     end
   end
 

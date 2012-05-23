@@ -222,7 +222,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run("/bin/true", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing command "/bin/true" with no arguments.
+          INFO Executing command "/bin/true".
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: (none)
@@ -234,7 +234,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run("/bin/true", "foo", "bar", "baz", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing command "/bin/true" with arguments "foo", "bar", "baz".
+          INFO Executing command "/bin/true foo bar baz".
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: (none)
@@ -251,7 +251,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run(command, :stdin => "", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing command "#@tmp_dir/command" with no arguments.
+          INFO Executing command "#@tmp_dir/command".
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: (none)
@@ -266,7 +266,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run(command, :stdin => "blah", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing command "#@tmp_dir/command" with no arguments.
+          INFO Executing command "#@tmp_dir/command".
           INFO Standard input: blah
           INFO Status: 0
           INFO Standard output: output
@@ -278,7 +278,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run("/bin/true", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing command "/bin/true" with no arguments.
+          INFO Executing command "/bin/true".
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: (none)
@@ -290,7 +290,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run("/bin/true", :stdin => "", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing command "/bin/true" with no arguments.
+          INFO Executing command "/bin/true".
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: (none)
@@ -300,7 +300,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run("/bin/true", :stdin => "blah", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing command "/bin/true" with no arguments.
+          INFO Executing command "/bin/true".
           INFO Standard input: blah
           INFO Status: 0
           INFO Standard output: (none)
@@ -313,7 +313,7 @@ describe Cheetah do
           lambda { |logger|
             Cheetah.run("/bin/true", :stdin => stdin, :logger => logger)
           }.should log(<<-EOT)
-            INFO Executing command "/bin/true" with no arguments.
+            INFO Executing command "/bin/true".
             INFO Status: 0
             INFO Standard output: (none)
             INFO Error output: (none)
@@ -324,7 +324,7 @@ describe Cheetah do
           lambda { |logger|
             Cheetah.run("/bin/true", :stdin => stdin, :logger => logger)
           }.should log(<<-EOT)
-            INFO Executing command "/bin/true" with no arguments.
+            INFO Executing command "/bin/true".
             INFO Status: 0
             INFO Standard output: (none)
             INFO Error output: (none)
@@ -338,7 +338,7 @@ describe Cheetah do
             Cheetah.run(@command, :stdout => stdout, :logger => logger)
           end
         }.should log(<<-EOT)
-          INFO Executing command "#@tmp_dir/command" with no arguments.
+          INFO Executing command "#@tmp_dir/command".
           INFO Standard input: (none)
           INFO Status: 0
           ERROR Error output: error
@@ -351,7 +351,7 @@ describe Cheetah do
             Cheetah.run(@command, :stderr => stderr, :logger => logger)
           end
         }.should log(<<-EOT)
-          INFO Executing command "#@tmp_dir/command" with no arguments.
+          INFO Executing command "#@tmp_dir/command".
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: output
@@ -366,7 +366,7 @@ describe Cheetah do
             # Eat it.
           end
         }.should log(<<-EOT)
-          INFO Executing command "/bin/false" with no arguments.
+          INFO Executing command "/bin/false".
           INFO Standard input: (none)
           ERROR Status: 1
           INFO Standard output: (none)
@@ -378,7 +378,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run("/bin/true", :logger => logger, :logger_level_info => Logger::DEBUG)
         }.should log(<<-EOT)
-          DEBUG Executing command "/bin/true" with no arguments.
+          DEBUG Executing command "/bin/true".
           DEBUG Standard input: (none)
           DEBUG Status: 0
           DEBUG Standard output: (none)
@@ -394,7 +394,7 @@ describe Cheetah do
             # Eat it.
           end
         }.should log(<<-EOT)
-          INFO Executing command "/bin/false" with no arguments.
+          INFO Executing command "/bin/false".
           INFO Standard input: (none)
           WARN Status: 1
           INFO Standard output: (none)
@@ -460,7 +460,7 @@ describe Cheetah do
             Cheetah.run("/bin/false")
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.message.should ==
-              "Execution of command \"/bin/false\" with no arguments failed with status 1."
+              "Execution of command \"/bin/false\" failed with status 1."
           }
         end
 
@@ -469,7 +469,7 @@ describe Cheetah do
             Cheetah.run("/bin/false", "foo", "bar", "baz")
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.message.should ==
-              "Execution of command \"/bin/false\" with arguments \"foo\", \"bar\", \"baz\" failed with status 1."
+              "Execution of command \"/bin/false foo bar baz\" failed with status 1."
           }
         end
       end
