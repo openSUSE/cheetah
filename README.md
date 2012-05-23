@@ -32,7 +32,6 @@ Features
 Non-features
 ------------
 
-  * Handling of commands producing big outputs
   * Handling of interactive commands
 
 Installation
@@ -68,6 +67,11 @@ files = Cheetah.run("ls", "-la", :stdout => :capture)
 
 # Capture both standard and error output
 results, errors = Cheetah.run("grep", "-r", "User", ".", :stdout => :capture, :stderr => :capture)
+
+# Capture standard output into a stream
+File.open("files.txt") do |stdout|
+  Cheetah.run("ls", "-la", :stdout => stdout)
+end
 ```
 
 If the command can't be executed for some reason or returns a non-zero exit status, the method raises an exception with detailed information about the failure:

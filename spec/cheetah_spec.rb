@@ -186,9 +186,30 @@ describe Cheetah do
       it "handles commands that output nothing correctly with :stdout => :capture and :stderr => :capture" do
         Cheetah.run("/bin/true", :stdout => :capture, :stderr => :capture).should == ["", ""]
       end
+
+      it "writes standard output to :stdout when set to an IO" do
+        StringIO.open("", "w") do |stdout|
+          Cheetah.run(@command, :stdout => stdout)
+          stdout.string.should == "output"
+        end
+      end
+
+      it "writes error output to :stderr when set to an IO" do
+        StringIO.open("", "w") do |stderr|
+          Cheetah.run(@command, :stderr => stderr)
+          stderr.string.should == "error"
+        end
+      end
     end
 
     describe "logging" do
+      before do
+        @command = create_command(<<-EOT)
+          echo -n 'output'
+          echo -n 'error' 1>&2
+        EOT
+      end
+
       it "does not log anything with no :logger option" do
         lambda { Cheetah.run("/bin/true") }.should log("")
       end
@@ -309,6 +330,32 @@ describe Cheetah do
             INFO Error output: (none)
           EOT
         end
+      end
+
+      it "does not log standard output with :stdout set to an IO" do
+        lambda { |logger|
+          StringIO.open("", "w") do |stdout|
+            Cheetah.run(@command, :stdout => stdout, :logger => logger)
+          end
+        }.should log(<<-EOT)
+          INFO Executing command "#@tmp_dir/command" with no arguments.
+          INFO Standard input: (none)
+          INFO Status: 0
+          ERROR Error output: error
+        EOT
+      end
+
+      it "does not log error output with :stderr set to an IO" do
+        lambda { |logger|
+          StringIO.open("", "w") do |stderr|
+            Cheetah.run(@command, :stderr => stderr, :logger => logger)
+          end
+        }.should log(<<-EOT)
+          INFO Executing command "#@tmp_dir/command" with no arguments.
+          INFO Standard input: (none)
+          INFO Status: 0
+          INFO Standard output: output
+        EOT
       end
 
       it "logs an unsuccessful execution of a command" do
@@ -442,6 +489,26 @@ describe Cheetah do
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.stdout.should == "output"
             e.stderr.should == "error"
+          }
+        end
+
+        it "raises an exception with stdout set to nil with :stdout set to an IO" do
+          lambda {
+            StringIO.open("", "w") do |stdout|
+              Cheetah.run(@command, :stdout => stdout)
+            end
+          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
+            e.stdout.should be_nil
+          }
+        end
+
+        it "raises an exception with stderr set to nil with :stderr set to an IO" do
+          lambda {
+            StringIO.open("", "w") do |stderr|
+              Cheetah.run(@command, :stderr => stderr)
+            end
+          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
+            e.stderr.should be_nil
           }
         end
 

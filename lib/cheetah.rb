@@ -12,7 +12,6 @@ require "logger"
 #
 # ## Non-features
 #
-#   * Handling of commands producing big outputs
 #   * Handling of interactive commands
 #
 # @example Run a command and capture its output
@@ -41,10 +40,12 @@ module Cheetah
     # @return [Process::Status] the executed command exit status
     attr_reader :status
 
-    # @return [String] the output the executed command wrote to stdout
+    # @return [String, nil] the output the executed command wrote to stdout; can
+    #   be `nil` if the output was captured into a stream
     attr_reader :stdout
 
-    # @return [String] the output the executed command wrote to stderr
+    # @return [String, nil] the output the executed command wrote to stderr; can
+    #   be `nil` if the output was captured into a stream
     attr_reader :stderr
 
     # Initializes a new {ExecutionFailed} instance.
@@ -52,8 +53,8 @@ module Cheetah
     # @param [String] command the executed command
     # @param [Array<String>] args the executed command arguments
     # @param [Process::Status] status the executed command exit status
-    # @param [String] stdout the output the executed command wrote to stdout
-    # @param [String] stderr the output the executed command wrote to stderr
+    # @param [String, nil] stdout the output the executed command wrote to stdout
+    # @param [String, nil] stderr the output the executed command wrote to stderr
     # @param [String, nil] message the exception message
     def initialize(command, args, status, stdout, stderr, message = nil)
       super(message)
@@ -124,10 +125,13 @@ module Cheetah
     #
     # The command execution can be logged using a logger passed in the `:logger`
     # option. If a logger is set, the method will log the command, its status,
-    # input and both outputs to it. By default, the `Logger::INFO` level will be
-    # used for normal messages and the `Logger::ERROR` level for messages about
-    # errors (non-zero exit status or non-empty error output), but this can be
-    # changed using the `:logger_level_info` and `:logger_level_error` options.
+    # input and both outputs to it (the outputs are not logged if they are
+    # streamed into an `IO` — see the `:stdout` and `:stderr` options).
+    #
+    # By default, the `Logger::INFO` level will be used for normal messages and
+    # the `Logger::ERROR` level for messages about errors (non-zero exit status
+    # or non-empty error output), but this can be changed using the
+    # `:logger_level_info` and `:logger_level_error` options.
     #
     # Values of options not set using the `options` parameter are taken from
     # {Cheetah.default_options}. If a value is not specified there too, the
@@ -139,14 +143,24 @@ module Cheetah
     #   @param [Hash] options the options to execute the command with
     #   @option options [String, IO] :stdin ('') a `String` to use as command's
     #     standard input or an `IO` to read it from
-    #   @option options [String, nil] :stdout (nil) if set to `:capture`,
-    #     capture command's standard output and return it as a string (or as the
-    #     first element of a two-element array of strings if the `:stderr`
-    #     option is set to `:capture` too)
-    #   @option options [String, nil] :stderr (nil) if set to `:capture`,
-    #     capture command's error output and return it as a string (or as the
-    #     second element of a two-element array of strings if the `:stdout`
-    #     option is set to `:capture` too)
+    #   @option options [nil, :capture, IO] :stdout (nil) specifies command's
+    #     standard output handling
+    #
+    #     * if set to `nil`, ignore the output
+    #     * if set to `:capture`, capture the output and return it as a string
+    #       (or as the first element of a two-element array of strings if the
+    #       `:stderr` option is set to `:capture` too)
+    #     * if set to an `IO`, write the ouptut into it gradually as the command
+    #       produces it
+    #   @option options [nil, :capture, IO] :stderr (nil) specifies command's
+    #     error output handling
+    #
+    #     * if set to `nil`, ignore the output
+    #     * if set to `:capture`, capture the output and return it as a string
+    #       (or as the second element of a two-element array of strings if the
+    #       `:stdout` option is set to `:capture` too)
+    #     * if set to an `IO`, write the ouptut into it gradually as the command
+    #       produces it
     #   @option options [Logger, nil] :logger (nil) logger to log the command
     #     execution
     #   @option options [Integer] :logger_level_info (Logger::INFO) level for
@@ -186,6 +200,14 @@ module Cheetah
       else
         options[:stdin]
       end
+
+      # The assumption here is that anything except :capture and nil is an
+      # IO-like object. We avoid detecting it directly to allow passing
+      # StringIO, mocks, etc.
+      streaming_stdout = ![nil, :capture].include?(options[:stdout])
+      streaming_stderr = ![nil, :capture].include?(options[:stderr])
+      stdout = streaming_stdout ? options[:stdout] : StringIO.new("")
+      stderr = streaming_stderr ? options[:stderr] : StringIO.new("")
 
       logger = LogAdapter.new(options[:logger],
         options[:logger_level_info],
@@ -243,7 +265,7 @@ module Cheetah
       #
       # Similar issues can happen with standard input vs. one of the outputs.
       stdin_buffer = ""
-      outputs = { pipe_stdout_read => "", pipe_stderr_read => "" }
+      outputs = { pipe_stdout_read => stdout, pipe_stderr_read => stderr }
       pipes_readable = [pipe_stdout_read, pipe_stderr_read]
       pipes_writable = [pipe_stdin_write]
       loop do
@@ -279,34 +301,42 @@ module Cheetah
         end
       end
 
-      stdout = outputs[pipe_stdout_read]
-      stderr = outputs[pipe_stderr_read]
-
       pid, status = Process.wait2(pid)
       begin
         if !status.success?
-          raise ExecutionFailed.new(command, args, status, stdout, stderr,
+          raise ExecutionFailed.new(
+            command,
+            args,
+            status,
+            streaming_stdout ? nil : stdout.string,
+            streaming_stderr ? nil : stderr.string,
             "Execution of command #{command.inspect} " +
-            "with #{describe_args(args)} " +
-            "failed with status #{status.exitstatus}.")
+              "with #{describe_args(args)} " +
+              "failed with status #{status.exitstatus}."
+          )
         end
       ensure
         logger.send status.success? ? :info : :error,
           "Status: #{status.exitstatus}"
-        logger.info "Standard output: " + (stdout.empty? ? "(none)" : stdout)
-        logger.send stderr.empty? ? :info : :error,
-          "Error output: " + (stderr.empty? ? "(none)" : stderr)
+        unless streaming_stdout
+          logger.info "Standard output: " +
+            (stdout.string.empty? ? "(none)" : stdout.string)
+        end
+        unless streaming_stderr
+          logger.send stderr.string.empty? ? :info : :error,
+            "Error output: " + (stderr.string.empty? ? "(none)" : stderr.string)
+        end
       end
 
       case [options[:stdout] == :capture, options[:stderr] == :capture]
         when [false, false]
           nil
         when [true, false]
-          stdout
+          stdout.string
         when [false, true]
-          stderr
+          stderr.string
         when [true, true]
-          [stdout, stderr]
+          [stdout.string, stderr.string]
       end
     end
 
