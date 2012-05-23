@@ -218,15 +218,15 @@ module Cheetah
         command = command.first
       end
 
-      pipe_stdin_read,  pipe_stdin_write  = IO.pipe
-      pipe_stdout_read, pipe_stdout_write = IO.pipe
-      pipe_stderr_read, pipe_stderr_write = IO.pipe
-
       logger.info "Executing command #{command.inspect} with #{describe_args(args)}."
       if options[:stdin].is_a?(String)
         logger.info "Standard input: " +
           (options[:stdin].empty? ? "(none)" : options[:stdin])
       end
+
+      pipe_stdin_read,  pipe_stdin_write  = IO.pipe
+      pipe_stdout_read, pipe_stdout_write = IO.pipe
+      pipe_stderr_read, pipe_stderr_write = IO.pipe
 
       pid = fork do
         begin
