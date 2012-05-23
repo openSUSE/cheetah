@@ -92,6 +92,10 @@ module Cheetah
     :logger_level_error => Logger::ERROR
   }
 
+  # @private
+  READ  = 0
+  WRITE = 1
+
   class << self
     # The default options of the {Cheetah.run} method. Values of options not
     # specified in its `options` parameter are taken from here. If a value is
@@ -225,23 +229,21 @@ module Cheetah
           (options[:stdin].empty? ? "(none)" : options[:stdin])
       end
 
-      pipe_stdin_read,  pipe_stdin_write  = IO.pipe
-      pipe_stdout_read, pipe_stdout_write = IO.pipe
-      pipe_stderr_read, pipe_stderr_write = IO.pipe
+      pipes = { :stdin => IO.pipe, :stdout => IO.pipe, :stderr => IO.pipe }
 
       pid = fork do
         begin
-          pipe_stdin_write.close
-          STDIN.reopen(pipe_stdin_read)
-          pipe_stdin_read.close
+          pipes[:stdin][WRITE].close
+          STDIN.reopen(pipes[:stdin][READ])
+          pipes[:stdin][READ].close
 
-          pipe_stdout_read.close
-          STDOUT.reopen(pipe_stdout_write)
-          pipe_stdout_write.close
+          pipes[:stdout][READ].close
+          STDOUT.reopen(pipes[:stdout][WRITE])
+          pipes[:stdout][WRITE].close
 
-          pipe_stderr_read.close
-          STDERR.reopen(pipe_stderr_write)
-          pipe_stderr_write.close
+          pipes[:stderr][READ].close
+          STDERR.reopen(pipes[:stderr][WRITE])
+          pipes[:stderr][WRITE].close
 
           # All file descriptors from 3 above should be closed here, but since I
           # don't know about any way how to detect the maximum file descriptor
@@ -253,7 +255,11 @@ module Cheetah
         end
       end
 
-      [pipe_stdin_read, pipe_stdout_write, pipe_stderr_write].each { |p| p.close }
+      [
+        pipes[:stdin][READ],
+        pipes[:stdout][WRITE],
+        pipes[:stderr][WRITE]
+      ].each { |p| p.close }
 
       # We write the command's input and read its output using a select loop.
       # Why? Because otherwise we could end up with a deadlock.
@@ -266,9 +272,9 @@ module Cheetah
       #
       # Similar issues can happen with standard input vs. one of the outputs.
       stdin_buffer = ""
-      outputs = { pipe_stdout_read => stdout, pipe_stderr_read => stderr }
-      pipes_readable = [pipe_stdout_read, pipe_stderr_read]
-      pipes_writable = [pipe_stdin_write]
+      outputs = { pipes[:stdout][READ] => stdout, pipes[:stderr][READ] => stderr }
+      pipes_readable = [pipes[:stdout][READ], pipes[:stderr][READ]]
+      pipes_writable = [pipes[:stdin][WRITE]]
       loop do
         pipes_readable.reject!(&:closed?)
         pipes_writable.reject!(&:closed?)
