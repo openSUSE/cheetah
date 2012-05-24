@@ -91,36 +91,17 @@ describe Cheetah do
       end
 
       it "runs all commands with arguments" do
-        # The "echo" and "read" commands are just for synchronization so that
-        # the arguments are written in consistent order into the file.
-
-        command1 = create_command(<<-EOT, :name => "command1")
-          echo "$@" >> #@tmp_dir/args
-          echo
+        command = create_command(<<-EOT)
+          cat
+          echo "$@"
         EOT
 
-        command2 = create_command(<<-EOT, :name => "command2")
-          read
-          echo "$@" >> #@tmp_dir/args
-          echo
-        EOT
-
-        command3 = create_command(<<-EOT, :name => "command3")
-          read
-          echo "$@" >> #@tmp_dir/args
-        EOT
-
-        lambda {
-          Cheetah.run(
-            [command1, "foo1", "bar1", "baz1"],
-            [command2, "foo2", "bar2", "baz2"],
-            [command3, "foo3", "bar3", "baz3"]
-          )
-        }.should write([
-          "foo1 bar1 baz1\n",
-          "foo2 bar2 baz2\n",
-          "foo3 bar3 baz3\n",
-        ].join("")).into("#@tmp_dir/args")
+        Cheetah.run(
+          [command, "foo1", "bar1", "baz1"],
+          [command, "foo2", "bar2", "baz2"],
+          [command, "foo3", "bar3", "baz3"],
+          :stdout => :capture
+        ).should == "foo1 bar1 baz1\nfoo2 bar2 baz2\nfoo3 bar3 baz3\n"
       end
 
       it "passes standard output of one command to the next one" do
@@ -152,30 +133,10 @@ describe Cheetah do
       end
 
       it "combines error output of all commands" do
-        # The "echo" and "read" commands are just for synchronization so that
-        # the output is written in consistent order into the file.
+        command = create_command("echo 'error' 1>&2")
 
-        command1 = create_command(<<-EOT, :name => "command1")
-          echo 'error1' 1>&2
-          echo
-        EOT
-
-        command2 = create_command(<<-EOT, :name => "command2")
-          read
-          echo 'error2' 1>&2
-          echo
-        EOT
-
-        command3 = create_command(<<-EOT, :name => "command3")
-          read
-          echo 'error3' 1>&2
-        EOT
-
-        Cheetah.run([command1], [command2], [command3], :stderr => :capture).should == [
-          "error1\n",
-          "error2\n",
-          "error3\n",
-        ].join("")
+        Cheetah.run([command], [command], [command], :stderr => :capture).should ==
+          "error\nerror\nerror\n"
       end
     end
 
