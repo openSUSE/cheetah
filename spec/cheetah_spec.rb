@@ -312,6 +312,11 @@ describe Cheetah do
           echo -n 'output'
           echo -n 'error' 1>&2
         EOT
+        @eat_command = create_command(<<-EOT, :name => "eat")
+          while read line; do
+            true
+          done
+        EOT
       end
 
       it "does not log anything with no :logger option" do
@@ -392,9 +397,9 @@ describe Cheetah do
 
       it "logs standard input with no :stdin option" do
         lambda { |logger|
-          Cheetah.run("/bin/true", :logger => logger)
+          Cheetah.run(@eat_command, :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing command "/bin/true".
+          INFO Executing command "#@tmp_dir/eat".
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: (none)
@@ -404,9 +409,9 @@ describe Cheetah do
 
       it "logs standard input with :stdin set to a string" do
         lambda { |logger|
-          Cheetah.run("/bin/true", :stdin => "", :logger => logger)
+          Cheetah.run(@eat_command, :stdin => "", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing command "/bin/true".
+          INFO Executing command "#@tmp_dir/eat".
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: (none)
@@ -414,9 +419,9 @@ describe Cheetah do
         EOT
 
         lambda { |logger|
-          Cheetah.run("/bin/true", :stdin => "blah", :logger => logger)
+          Cheetah.run(@eat_command, :stdin => "blah", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing command "/bin/true".
+          INFO Executing command "#@tmp_dir/eat".
           INFO Standard input: blah
           INFO Status: 0
           INFO Standard output: (none)
@@ -427,9 +432,9 @@ describe Cheetah do
       it "logs standard input with :stdin set to an IO" do
         StringIO.open("") do |stdin|
           lambda { |logger|
-            Cheetah.run("/bin/true", :stdin => stdin, :logger => logger)
+            Cheetah.run(@eat_command, :stdin => stdin, :logger => logger)
           }.should log(<<-EOT)
-            INFO Executing command "/bin/true".
+            INFO Executing command "#@tmp_dir/eat".
             INFO Status: 0
             INFO Standard output: (none)
             INFO Error output: (none)
@@ -438,9 +443,9 @@ describe Cheetah do
 
         StringIO.open("blah") do |stdin|
           lambda { |logger|
-            Cheetah.run("/bin/true", :stdin => stdin, :logger => logger)
+            Cheetah.run(@eat_command, :stdin => stdin, :logger => logger)
           }.should log(<<-EOT)
-            INFO Executing command "/bin/true".
+            INFO Executing command "#@tmp_dir/eat".
             INFO Status: 0
             INFO Standard output: (none)
             INFO Error output: (none)
