@@ -32,11 +32,10 @@ module Cheetah
 
   # Exception raised when a command execution fails.
   class ExecutionFailed < StandardError
-    # @return [String] the executed command
-    attr_reader :command
-
-    # @return [Array<String>] the executed command arguments
-    attr_reader :args
+    # @return [Array<Array<String>>] the executed commands as an array where
+    #   each item is again an array containing an executed command in the first
+    #   element and its arguments in the remaining ones
+    attr_reader :commands
 
     # @return [Process::Status] the executed command exit status
     attr_reader :status
@@ -51,19 +50,19 @@ module Cheetah
 
     # Initializes a new {ExecutionFailed} instance.
     #
-    # @param [String] command the executed command
-    # @param [Array<String>] args the executed command arguments
+    # @param [Array<Array<String>>] commands the executed commands as an array
+    #   where each item is again an array containing an executed command in the
+    #   first element and its arguments in the remaining ones
     # @param [Process::Status] status the executed command exit status
     # @param [String, nil] stdout the output the executed command wrote to stdout
     # @param [String, nil] stderr the output the executed command wrote to stderr
     # @param [String, nil] message the exception message
-    def initialize(command, args, status, stdout, stderr, message = nil)
+    def initialize(commands, status, stdout, stderr, message = nil)
       super(message)
-      @command = command
-      @args    = args
-      @status  = status
-      @stdout  = stdout
-      @stderr  = stderr
+      @commands = commands
+      @status   = status
+      @stdout   = stdout
+      @stderr   = stderr
     end
   end
 
@@ -196,7 +195,7 @@ module Cheetah
     #     puts "Standard output: #{e.stdout}"
     #     puts "Error ouptut:    #{e.stderr}"
     #   end
-    def run(command, *args)
+    def run(*args)
       options = args.last.is_a?(Hash) ? args.pop : {}
       options = BUILTIN_DEFAULT_OPTIONS.merge(@default_options).merge(options)
 
@@ -218,12 +217,26 @@ module Cheetah
         options[:logger_level_info],
         options[:logger_level_error])
 
-      if command.is_a?(Array)
-        args    = command[1..-1]
-        command = command.first
-      end
+      # There are three valid ways how to call Cheetah.run:
+      #
+      #   1. Single command, e.g. Cheetah.run("ls", "-la")
+      #
+      #        args == ["ls", "-la"]
+      #
+      #   2. Single command passed as an array, e.g. Cheetah.run(["ls", "-la"])
+      #
+      #        args == [["ls", "-la"]]
+      #
+      #   3. Piped command, e.g. Cheetah.run(["ps", "aux"], ["grep", "ruby"])
+      #
+      #        args == [["ps", "aux"], ["grep", "ruby"]]
+      #
+      # The following code ensures that the "commands" variable consistently (in
+      # all three cases) contains an array of arrays specifying commands and
+      # their arguments.
+      commands = args.all? { |a| a.is_a?(Array) } ? args : [args]
 
-      logger.info "Executing command #{format_command(command, args)}."
+      logger.info "Executing command #{format_commands(commands)}."
       if options[:stdin].is_a?(String)
         logger.info "Standard input: " +
           (options[:stdin].empty? ? "(none)" : options[:stdin])
@@ -231,7 +244,7 @@ module Cheetah
 
       pipes = { :stdin => IO.pipe, :stdout => IO.pipe, :stderr => IO.pipe }
 
-      pid = fork_command(command, args, pipes)
+      pid = fork_commands(commands, pipes)
 
       [
         pipes[:stdin][READ],
@@ -290,12 +303,11 @@ module Cheetah
       begin
         if !status.success?
           raise ExecutionFailed.new(
-            command,
-            args,
+            commands,
             status,
             streaming_stdout ? nil : stdout.string,
             streaming_stderr ? nil : stderr.string,
-            "Execution of command #{format_command(command, args)} " +
+            "Execution of command #{format_commands(commands)} " +
               "failed with status #{status.exitstatus}."
           )
         end
@@ -326,12 +338,29 @@ module Cheetah
 
     private
 
-    def fork_command(command, args, pipes)
-      pid = fork do
+    def fork_commands(commands, pipes)
+      fork do
         begin
-          pipes[:stdin][WRITE].close
-          STDIN.reopen(pipes[:stdin][READ])
-          pipes[:stdin][READ].close
+          if commands.size == 1
+            pipes[:stdin][WRITE].close
+            STDIN.reopen(pipes[:stdin][READ])
+            pipes[:stdin][READ].close
+          else
+            pipe_to_child = IO.pipe
+
+            fork_commands(commands[0..-2], {
+              :stdin  => pipes[:stdin],
+              :stdout => pipe_to_child,
+              :stderr => pipes[:stderr]
+            })
+
+            pipes[:stdin][READ].close
+            pipes[:stdin][WRITE].close
+
+            pipe_to_child[WRITE].close
+            STDIN.reopen(pipe_to_child[READ])
+            pipe_to_child[READ].close
+          end
 
           pipes[:stdout][READ].close
           STDOUT.reopen(pipes[:stdout][WRITE])
@@ -345,6 +374,7 @@ module Cheetah
           # don't know about any way how to detect the maximum file descriptor
           # number portably in Ruby, I didn't implement it. Patches welcome.
 
+          command, *args = commands.last
           exec([command, command], *args)
         rescue SystemCallError => e
           exit!(127)
@@ -352,8 +382,12 @@ module Cheetah
       end
     end
 
-    def format_command(command, args)
-      "\"#{Shellwords.join([command] + args)}\""
+    def format_commands(commands)
+      formatted_commands = commands.map do |command, *args|
+        Shellwords.join([command] + args)
+      end
+
+      "\"#{formatted_commands.join(" | ")}\""
     end
   end
 

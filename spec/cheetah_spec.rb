@@ -75,6 +75,110 @@ describe Cheetah do
       end
     end
 
+    describe "running piped commands" do
+      it "runs all commands without arguments" do
+        command1 = create_command("touch #@tmp_dir/touched1", :name => "command1")
+        command2 = create_command("touch #@tmp_dir/touched2", :name => "command2")
+        command3 = create_command("touch #@tmp_dir/touched3", :name => "command3")
+
+        lambda {
+          Cheetah.run([command1], [command2], [command3])
+        }.should touch(
+          "#@tmp_dir/touched1",
+          "#@tmp_dir/touched2",
+          "#@tmp_dir/touched3"
+        )
+      end
+
+      it "runs all commands with arguments" do
+        # The "echo" and "read" commands are just for synchronization so that
+        # the arguments are written in consistent order into the file.
+
+        command1 = create_command(<<-EOT, :name => "command1")
+          echo "$@" >> #@tmp_dir/args
+          echo
+        EOT
+
+        command2 = create_command(<<-EOT, :name => "command2")
+          read
+          echo "$@" >> #@tmp_dir/args
+          echo
+        EOT
+
+        command3 = create_command(<<-EOT, :name => "command3")
+          read
+          echo "$@" >> #@tmp_dir/args
+        EOT
+
+        lambda {
+          Cheetah.run(
+            [command1, "foo1", "bar1", "baz1"],
+            [command2, "foo2", "bar2", "baz2"],
+            [command3, "foo3", "bar3", "baz3"]
+          )
+        }.should write([
+          "foo1 bar1 baz1\n",
+          "foo2 bar2 baz2\n",
+          "foo3 bar3 baz3\n",
+        ].join("")).into("#@tmp_dir/args")
+      end
+
+      it "passes standard output of one command to the next one" do
+        command1 = create_command(<<-EOT, :name => "command1")
+          message=message
+          echo $message >> #@tmp_dir/messages
+          echo $message
+        EOT
+
+        command2 = create_command(<<-EOT, :name => "command2")
+          read message
+          echo $message >> #@tmp_dir/messages
+          echo $message
+        EOT
+
+        command3 = create_command(<<-EOT, :name => "command3")
+          read message
+          echo $message >> #@tmp_dir/messages
+          echo $message
+        EOT
+
+        lambda {
+          Cheetah.run([command1], [command2], [command3])
+        }.should write([
+          "message\n",
+          "message\n",
+          "message\n",
+        ].join("")).into("#@tmp_dir/messages")
+      end
+
+      it "combines error output of all commands" do
+        # The "echo" and "read" commands are just for synchronization so that
+        # the output is written in consistent order into the file.
+
+        command1 = create_command(<<-EOT, :name => "command1")
+          echo 'error1' 1>&2
+          echo
+        EOT
+
+        command2 = create_command(<<-EOT, :name => "command2")
+          read
+          echo 'error2' 1>&2
+          echo
+        EOT
+
+        command3 = create_command(<<-EOT, :name => "command3")
+          read
+          echo 'error3' 1>&2
+        EOT
+
+        Cheetah.run([command1], [command2], [command3], :stderr => :capture).should == [
+          "error1\n",
+          "error2\n",
+          "error3\n",
+        ].join("")
+      end
+    end
+
     describe "input passing" do
       it "does not use standard input of the parent process with no :stdin option" do
         # We just open a random file to get a file descriptor into which we can
@@ -235,6 +339,18 @@ describe Cheetah do
           Cheetah.run("/bin/true", "foo", "bar", "baz", :logger => logger)
         }.should log(<<-EOT)
           INFO Executing command "/bin/true foo bar baz".
+          INFO Standard input: (none)
+          INFO Status: 0
+          INFO Standard output: (none)
+          INFO Error output: (none)
+        EOT
+      end
+
+      it "logs a successful execution of piped commands" do
+        lambda { |logger|
+          Cheetah.run(["/bin/true"], ["/bin/true"], ["/bin/true"], :logger => logger)
+        }.should log(<<-EOT)
+          INFO Executing command "/bin/true | /bin/true | /bin/true".
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: (none)
@@ -437,8 +553,7 @@ describe Cheetah do
           lambda {
             Cheetah.run("unknown", "foo", "bar", "baz")
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
-            e.command.should          == "unknown"
-            e.args.should             == ["foo", "bar", "baz"]
+            e.commands.should          == [["unknown", "foo", "bar", "baz"]]
             e.status.exitstatus.should == 127
           }
         end
@@ -447,10 +562,27 @@ describe Cheetah do
           lambda {
             Cheetah.run("/bin/false", "foo", "bar", "baz")
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
-            e.command.should          == "/bin/false"
-            e.args.should             == ["foo", "bar", "baz"]
+            e.commands.should          == [["/bin/false", "foo", "bar", "baz"]]
             e.status.exitstatus.should == 1
           }
+        end
+      end
+
+      describe "piped commands" do
+        it "raises an exception when the last piped command fails" do
+          lambda {
+            Cheetah.run(["/bin/true"], ["/bin/true"], ["/bin/false"])
+          }.should raise_exception(Cheetah::ExecutionFailed)
+        end
+
+        it "does not raise an exception when other than last piped command fails" do
+          lambda {
+            Cheetah.run(["/bin/true"], ["/bin/false"], ["/bin/true"])
+          }.should_not raise_exception
+
+          lambda {
+            Cheetah.run(["/bin/false"], ["/bin/true"], ["/bin/true"])
+          }.should_not raise_exception
         end
       end
 
@@ -470,6 +602,15 @@ describe Cheetah do
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.message.should ==
               "Execution of command \"/bin/false foo bar baz\" failed with status 1."
+          }
+        end
+
+        it "raises an exception with a correct message for piped commands" do
+          lambda {
+            Cheetah.run(["/bin/true"], ["/bin/true"], ["/bin/false"])
+          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
+            e.message.should ==
+              "Execution of command \"/bin/true | /bin/true | /bin/false\" failed with status 1."
           }
         end
       end

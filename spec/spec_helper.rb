@@ -4,10 +4,10 @@ RSpec.configure do |c|
   c.color_enabled = true
 end
 
-RSpec::Matchers.define :touch do |file|
+RSpec::Matchers.define :touch do |*files|
   match do |proc|
     proc.call
-    File.exists?(file)
+    files.all? { |f| File.exists?(f) }
   end
 end
 
