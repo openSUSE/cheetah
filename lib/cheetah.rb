@@ -212,16 +212,7 @@ module Cheetah
 
       pid, status = Process.wait2(pid)
       begin
-        if !status.success?
-          raise ExecutionFailed.new(
-            commands,
-            status,
-            streamed[:stdout] ? nil : streams[:stdout].string,
-            streamed[:stderr] ? nil : streams[:stderr].string,
-            "Execution of command #{format_commands(commands)} " +
-              "failed with status #{status.exitstatus}."
-          )
-        end
+        handle_errors(commands, status, streams, streamed)
       ensure
         log_status(logger, status)
         log_output(logger, streams, streamed)
@@ -396,6 +387,19 @@ module Cheetah
           n = pipe.syswrite(stdin_buffer)
           stdin_buffer = stdin_buffer[n..-1]
         end
+      end
+    end
+
+    def handle_errors(commands, status, streams, streamed)
+      if !status.success?
+        raise ExecutionFailed.new(
+          commands,
+          status,
+          streamed[:stdout] ? nil : streams[:stdout].string,
+          streamed[:stderr] ? nil : streams[:stderr].string,
+          "Execution of command #{format_commands(commands)} " +
+            "failed with status #{status.exitstatus}."
+        )
       end
     end
 
