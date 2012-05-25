@@ -198,19 +198,11 @@ module Cheetah
       options = args.last.is_a?(Hash) ? args.pop : {}
       options = BUILTIN_DEFAULT_OPTIONS.merge(@default_options).merge(options)
 
-      stdin = if options[:stdin].is_a?(String)
-        StringIO.new(options[:stdin])
-      else
-        options[:stdin]
-      end
+      streamed = compute_streamed(options)
 
-      # The assumption here is that anything except :capture and nil is an
-      # IO-like object. We avoid detecting it directly to allow passing
-      # StringIO, mocks, etc.
-      streaming_stdout = ![nil, :capture].include?(options[:stdout])
-      streaming_stderr = ![nil, :capture].include?(options[:stderr])
-      stdout = streaming_stdout ? options[:stdout] : StringIO.new("")
-      stderr = streaming_stderr ? options[:stderr] : StringIO.new("")
+      stdin  = streamed[:stdin]  ? options[:stdin]  : StringIO.new(options[:stdin])
+      stdout = streamed[:stdout] ? options[:stdout] : StringIO.new("")
+      stderr = streamed[:stderr] ? options[:stderr] : StringIO.new("")
 
       logger = LogAdapter.new(options[:logger],
         options[:logger_level_info],
@@ -236,7 +228,7 @@ module Cheetah
       commands = args.all? { |a| a.is_a?(Array) } ? args : [args]
 
       logger.info "Executing command #{format_commands(commands)}."
-      if options[:stdin].is_a?(String)
+      unless streamed[:stdin]
         logger.info "Standard input: " +
           (options[:stdin].empty? ? "(none)" : options[:stdin])
       end
@@ -304,8 +296,8 @@ module Cheetah
           raise ExecutionFailed.new(
             commands,
             status,
-            streaming_stdout ? nil : stdout.string,
-            streaming_stderr ? nil : stderr.string,
+            streamed[:stdout] ? nil : stdout.string,
+            streamed[:stderr] ? nil : stderr.string,
             "Execution of command #{format_commands(commands)} " +
               "failed with status #{status.exitstatus}."
           )
@@ -313,11 +305,11 @@ module Cheetah
       ensure
         logger.send status.success? ? :info : :error,
           "Status: #{status.exitstatus}"
-        unless streaming_stdout
+        unless streamed[:stdout]
           logger.info "Standard output: " +
             (stdout.string.empty? ? "(none)" : stdout.string)
         end
-        unless streaming_stderr
+        unless streamed[:stderr]
           logger.send stderr.string.empty? ? :info : :error,
             "Error output: " + (stderr.string.empty? ? "(none)" : stderr.string)
         end
@@ -336,6 +328,17 @@ module Cheetah
     end
 
     private
+
+    def compute_streamed(options)
+      # The assumption for :stdout and :stderr is that anything except :capture
+      # and nil is an IO-like object. We avoid detecting it directly to allow
+      # passing StringIO, mocks, etc.
+      {
+        :stdin  => !options[:stdin].is_a?(String),
+        :stdout => ![nil, :capture].include?(options[:stdout]),
+        :stderr => ![nil, :capture].include?(options[:stderr])
+      }
+    end
 
     def fork_commands(commands, pipes)
       fork do
