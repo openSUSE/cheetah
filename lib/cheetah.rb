@@ -91,9 +91,8 @@ module Cheetah
     :logger_level_error => Logger::ERROR
   }
 
-  # @private
-  READ  = 0
-  WRITE = 1
+  READ  = 0 # @private
+  WRITE = 1 # @private
 
   class << self
     # The default options of the {Cheetah.run} method. Values of options not
