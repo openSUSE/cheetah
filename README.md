@@ -113,3 +113,8 @@ Cheetah.default_options = {}
 ```
 
 For more information, see the [API documentation](http://rubydoc.info/github/openSUSE/cheetah/frames).
+
+Compatibility
+-------------
+
+Cheetah should run well on any Unix system with Ruby 1.8.7 or 1.9.3. Non-Unix systems and different Ruby implementations/versions may work too but they were not tested.
