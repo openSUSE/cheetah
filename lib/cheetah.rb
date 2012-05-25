@@ -206,15 +206,7 @@ module Cheetah
       log_commands(logger, commands)
       log_input(logger, options, streamed)
 
-      pipes = { :stdin => IO.pipe, :stdout => IO.pipe, :stderr => IO.pipe }
-
-      pid = fork_commands(commands, pipes)
-
-      [
-        pipes[:stdin][READ],
-        pipes[:stdout][WRITE],
-        pipes[:stderr][WRITE]
-      ].each { |p| p.close }
+      pid, pipes = fork_commands(commands)
 
       # We write the command's input and read its output using a select loop.
       # Why? Because otherwise we could end up with a deadlock.
@@ -345,7 +337,7 @@ module Cheetah
       )
     end
 
-    def fork_commands(commands, pipes)
+    def fork_commands_recursive(commands, pipes)
       fork do
         begin
           if commands.size == 1
@@ -355,7 +347,7 @@ module Cheetah
           else
             pipe_to_child = IO.pipe
 
-            fork_commands(commands[0..-2], {
+            fork_commands_recursive(commands[0..-2], {
               :stdin  => pipes[:stdin],
               :stdout => pipe_to_child,
               :stderr => pipes[:stderr]
@@ -387,6 +379,20 @@ module Cheetah
           exit!(127)
         end
       end
+    end
+
+    def fork_commands(commands)
+      pipes = { :stdin => IO.pipe, :stdout => IO.pipe, :stderr => IO.pipe }
+
+      pid = fork_commands_recursive(commands, pipes)
+
+      [
+        pipes[:stdin][READ],
+        pipes[:stdout][WRITE],
+        pipes[:stderr][WRITE]
+      ].each(&:close)
+
+      [pid, pipes]
     end
 
     def log_commands(logger, commands)
