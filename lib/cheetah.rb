@@ -199,30 +199,12 @@ module Cheetah
       options = BUILTIN_DEFAULT_OPTIONS.merge(@default_options).merge(options)
 
       streamed = compute_streamed(options)
-      streams = build_streams(options, streamed)
+      streams  = build_streams(options, streamed)
+      commands = build_commands(args)
 
       logger = LogAdapter.new(options[:logger],
         options[:logger_level_info],
         options[:logger_level_error])
-
-      # There are three valid ways how to call Cheetah.run:
-      #
-      #   1. Single command, e.g. Cheetah.run("ls", "-la")
-      #
-      #        args == ["ls", "-la"]
-      #
-      #   2. Single command passed as an array, e.g. Cheetah.run(["ls", "-la"])
-      #
-      #        args == [["ls", "-la"]]
-      #
-      #   3. Piped command, e.g. Cheetah.run(["ps", "aux"], ["grep", "ruby"])
-      #
-      #        args == [["ps", "aux"], ["grep", "ruby"]]
-      #
-      # The following code ensures that the "commands" variable consistently (in
-      # all three cases) contains an array of arrays specifying commands and
-      # their arguments.
-      commands = args.all? { |a| a.is_a?(Array) } ? args : [args]
 
       logger.info "Executing command #{format_commands(commands)}."
       unless streamed[:stdin]
@@ -346,6 +328,27 @@ module Cheetah
         :stdout => streamed[:stdout] ? options[:stdout] : StringIO.new(""),
         :stderr => streamed[:stderr] ? options[:stderr] : StringIO.new("")
       }
+    end
+
+    def build_commands(args)
+      # There are three valid ways how to call Cheetah.run:
+      #
+      #   1. Single command, e.g. Cheetah.run("ls", "-la")
+      #
+      #        args == ["ls", "-la"]
+      #
+      #   2. Single command passed as an array, e.g. Cheetah.run(["ls", "-la"])
+      #
+      #        args == [["ls", "-la"]]
+      #
+      #   3. Piped command, e.g. Cheetah.run(["ps", "aux"], ["grep", "ruby"])
+      #
+      #        args == [["ps", "aux"], ["grep", "ruby"]]
+      #
+      # The following code ensures that the result consistently (in all three
+      # cases) contains an array of arrays specifying commands and their
+      # arguments.
+      args.all? { |a| a.is_a?(Array) } ? args : [args]
     end
 
     def fork_commands(commands, pipes)
