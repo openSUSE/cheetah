@@ -207,10 +207,9 @@ module Cheetah
       log_input(logger, options, streamed)
 
       pid, pipes = fork_commands(commands)
-
       select_loop(streams, pipes)
-
       pid, status = Process.wait2(pid)
+
       begin
         handle_errors(commands, status, streams, streamed)
       ensure
