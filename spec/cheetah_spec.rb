@@ -621,7 +621,7 @@ describe Cheetah do
 
         it "handles commands that output nothing correctly" do
           lambda {
-            Cheetah.run("/bin/false", :stdout => :capture, :stderr => :capture)
+            Cheetah.run("/bin/false")
           }.should raise_exception(Cheetah::ExecutionFailed) { |e|
             e.stdout.should == ""
             e.stderr.should == ""
