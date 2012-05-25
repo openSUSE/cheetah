@@ -518,7 +518,7 @@ describe Cheetah do
         it "raises an exception when the command is not found" do
           lambda {
             Cheetah.run("unknown", "foo", "bar", "baz")
-          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
+          }.should raise_error(Cheetah::ExecutionFailed) { |e|
             e.commands.should          == [["unknown", "foo", "bar", "baz"]]
             e.status.exitstatus.should == 127
           }
@@ -527,7 +527,7 @@ describe Cheetah do
         it "raises an exception when the command returns non-zero status" do
           lambda {
             Cheetah.run("/bin/false", "foo", "bar", "baz")
-          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
+          }.should raise_error(Cheetah::ExecutionFailed) { |e|
             e.commands.should          == [["/bin/false", "foo", "bar", "baz"]]
             e.status.exitstatus.should == 1
           }
@@ -538,17 +538,17 @@ describe Cheetah do
         it "raises an exception when the last piped command fails" do
           lambda {
             Cheetah.run(["/bin/true"], ["/bin/true"], ["/bin/false"])
-          }.should raise_exception(Cheetah::ExecutionFailed)
+          }.should raise_error(Cheetah::ExecutionFailed)
         end
 
         it "does not raise an exception when other than last piped command fails" do
           lambda {
             Cheetah.run(["/bin/true"], ["/bin/false"], ["/bin/true"])
-          }.should_not raise_exception
+          }.should_not raise_error
 
           lambda {
             Cheetah.run(["/bin/false"], ["/bin/true"], ["/bin/true"])
-          }.should_not raise_exception
+          }.should_not raise_error
         end
       end
 
@@ -556,7 +556,7 @@ describe Cheetah do
         it "raises an exception with a correct message for a command without arguments" do
           lambda {
             Cheetah.run("/bin/false")
-          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
+          }.should raise_error(Cheetah::ExecutionFailed) { |e|
             e.message.should ==
               "Execution of command \"/bin/false\" failed with status 1."
           }
@@ -565,7 +565,7 @@ describe Cheetah do
         it "raises an exception with a correct message for a command with arguments" do
           lambda {
             Cheetah.run("/bin/false", "foo", "bar", "baz")
-          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
+          }.should raise_error(Cheetah::ExecutionFailed) { |e|
             e.message.should ==
               "Execution of command \"/bin/false foo bar baz\" failed with status 1."
           }
@@ -574,7 +574,7 @@ describe Cheetah do
         it "raises an exception with a correct message for piped commands" do
           lambda {
             Cheetah.run(["/bin/true"], ["/bin/true"], ["/bin/false"])
-          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
+          }.should raise_error(Cheetah::ExecutionFailed) { |e|
             e.message.should ==
               "Execution of command \"/bin/true | /bin/true | /bin/false\" failed with status 1."
           }
@@ -593,7 +593,7 @@ describe Cheetah do
         it "raises an exception with both stdout and stderr set" do
           lambda {
             Cheetah.run(@command)
-          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
+          }.should raise_error(Cheetah::ExecutionFailed) { |e|
             e.stdout.should == "output"
             e.stderr.should == "error"
           }
@@ -604,7 +604,7 @@ describe Cheetah do
             StringIO.open("", "w") do |stdout|
               Cheetah.run(@command, :stdout => stdout)
             end
-          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
+          }.should raise_error(Cheetah::ExecutionFailed) { |e|
             e.stdout.should be_nil
           }
         end
@@ -614,7 +614,7 @@ describe Cheetah do
             StringIO.open("", "w") do |stderr|
               Cheetah.run(@command, :stderr => stderr)
             end
-          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
+          }.should raise_error(Cheetah::ExecutionFailed) { |e|
             e.stderr.should be_nil
           }
         end
@@ -622,7 +622,7 @@ describe Cheetah do
         it "handles commands that output nothing correctly" do
           lambda {
             Cheetah.run("/bin/false")
-          }.should raise_exception(Cheetah::ExecutionFailed) { |e|
+          }.should raise_error(Cheetah::ExecutionFailed) { |e|
             e.stdout.should == ""
             e.stderr.should == ""
           }
