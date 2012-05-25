@@ -222,6 +222,8 @@ module Cheetah
 
     private
 
+    # Parts of Cheetah.run
+
     def compute_streamed(options)
       # The assumption for :stdout and :stderr is that anything except :capture
       # and nil is an IO-like object. We avoid detecting it directly to allow
@@ -406,6 +408,8 @@ module Cheetah
       end
     end
 
+    # Logging
+
     def log_commands(logger, commands)
       logger.info "Executing command #{format_commands(commands)}."
     end
@@ -430,6 +434,8 @@ module Cheetah
           "Error output: #{format_input_output(streams[:stderr].string)}"
       end
     end
+
+    # Formatting
 
     def format_commands(commands)
       formatted_commands = commands.map do |command, *args|
