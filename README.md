@@ -1,7 +1,8 @@
 Cheetah
 =======
 
-Cheetah is a simple library for executing external commands safely and conveniently.
+Cheetah is a simple library for executing external commands safely and
+conveniently.
 
 Examples
 --------
@@ -48,7 +49,8 @@ First, require the library:
 require "cheetah"
 ```
 
-You can now use the `Cheetah.run` method to run commands, pass them an input and capture their output:
+You can now use the `Cheetah.run` method to run commands, pass them an input and
+capture their output:
 
 ```ruby
 # Run a command with arguments
@@ -74,7 +76,9 @@ File.open("files.txt") do |stdout|
 end
 ```
 
-If the command can't be executed for some reason or returns a non-zero exit status, the method raises an exception with detailed information about the failure:
+If the command can't be executed for some reason or returns a non-zero exit
+status, the method raises an exception with detailed information about the
+failure:
 
 ```ruby
 # Run a command and handle errors
@@ -87,7 +91,11 @@ rescue Cheetah::ExecutionFailed => e
 end
 ```
 
-For debugging purposes, you can also use a logger. Cheetah will log the command, its status, input and both outputs to it. By default, the `Logger::INFO` level will be used for normal messages and the `Logger::ERROR` level for messages about errors (non-zero exit status or non-empty error output), but this can be changed if needed:
+For debugging purposes, you can also use a logger. Cheetah will log the command,
+its status, input and both outputs to it. By default, the `Logger::INFO` level
+will be used for normal messages and the `Logger::ERROR` level for messages
+about errors (non-zero exit status or non-empty error output), but this can be
+changed if needed:
 
 ```ruby
 # Log the execution
@@ -101,7 +109,8 @@ Cheetah.run("ls -l",
 )
 ```
 
-To avoid repetition, you can set global default value of any option passed too `Cheetah.run`:
+To avoid repetition, you can set global default value of any option passed too
+`Cheetah.run`:
 
 ```ruby
 # If you're tired of passing the :logger option all the time...
@@ -112,9 +121,12 @@ Cheetah.run("make", "install")
 Cheetah.default_options = {}
 ```
 
-For more information, see the [API documentation](http://rubydoc.info/github/openSUSE/cheetah/frames).
+For more information, see the
+[API documentation](http://rubydoc.info/github/openSUSE/cheetah/frames).
 
 Compatibility
 -------------
 
-Cheetah should run well on any Unix system with Ruby 1.8.7 or 1.9.3. Non-Unix systems and different Ruby implementations/versions may work too but they were not tested.
+Cheetah should run well on any Unix system with Ruby 1.8.7 or 1.9.3. Non-Unix
+systems and different Ruby implementations/versions may work too but they were
+not tested.
