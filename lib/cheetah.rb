@@ -201,15 +201,10 @@ module Cheetah
       streamed = compute_streamed(options)
       streams  = build_streams(options, streamed)
       commands = build_commands(args)
+      logger   = build_log_adapter(options)
 
-      logger = LogAdapter.new(options[:logger],
-        options[:logger_level_info],
-        options[:logger_level_error])
-
-      logger.info "Executing command #{format_commands(commands)}."
-      unless streamed[:stdin]
-        logger.info "Standard input: #{format_input_output(options[:stdin])}"
-      end
+      log_commands(logger, commands)
+      log_input(logger, options, streamed)
 
       pipes = { :stdin => IO.pipe, :stdout => IO.pipe, :stderr => IO.pipe }
 
@@ -284,15 +279,8 @@ module Cheetah
           )
         end
       ensure
-        logger.send status.success? ? :info : :error,
-          "Status: #{status.exitstatus}"
-        unless streamed[:stdout]
-          logger.info "Standard output: #{format_input_output(streams[:stdout].string)}"
-        end
-        unless streamed[:stderr]
-          logger.send streams[:stderr].string.empty? ? :info : :error,
-            "Error output: #{format_input_output(streams[:stderr].string)}"
-        end
+        log_status(logger, status)
+        log_output(logger, streams, streamed)
       end
 
       case [options[:stdout] == :capture, options[:stderr] == :capture]
@@ -349,6 +337,14 @@ module Cheetah
       args.all? { |a| a.is_a?(Array) } ? args : [args]
     end
 
+    def build_log_adapter(options)
+      LogAdapter.new(
+        options[:logger],
+        options[:logger_level_info],
+        options[:logger_level_error]
+      )
+    end
+
     def fork_commands(commands, pipes)
       fork do
         begin
@@ -390,6 +386,31 @@ module Cheetah
         rescue SystemCallError => e
           exit!(127)
         end
+      end
+    end
+
+    def log_commands(logger, commands)
+      logger.info "Executing command #{format_commands(commands)}."
+    end
+
+    def log_input(logger, options, streamed)
+      unless streamed[:stdin]
+        logger.info "Standard input: #{format_input_output(options[:stdin])}"
+      end
+    end
+
+    def log_status(logger, status)
+      logger.send status.success? ? :info : :error,
+        "Status: #{status.exitstatus}"
+    end
+
+    def log_output(logger, streams, streamed)
+      unless streamed[:stdout]
+        logger.info "Standard output: #{format_input_output(streams[:stdout].string)}"
+      end
+      unless streamed[:stderr]
+        logger.send streams[:stderr].string.empty? ? :info : :error,
+          "Error output: #{format_input_output(streams[:stderr].string)}"
       end
     end
 
