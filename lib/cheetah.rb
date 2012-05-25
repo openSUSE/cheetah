@@ -208,8 +208,7 @@ module Cheetah
 
       logger.info "Executing command #{format_commands(commands)}."
       unless streamed[:stdin]
-        logger.info "Standard input: " +
-          (options[:stdin].empty? ? "(none)" : options[:stdin])
+        logger.info "Standard input: #{format_input_output(options[:stdin])}"
       end
 
       pipes = { :stdin => IO.pipe, :stdout => IO.pipe, :stderr => IO.pipe }
@@ -288,12 +287,11 @@ module Cheetah
         logger.send status.success? ? :info : :error,
           "Status: #{status.exitstatus}"
         unless streamed[:stdout]
-          logger.info "Standard output: " +
-            (streams[:stdout].string.empty? ? "(none)" : streams[:stdout].string)
+          logger.info "Standard output: #{format_input_output(streams[:stdout].string)}"
         end
         unless streamed[:stderr]
           logger.send streams[:stderr].string.empty? ? :info : :error,
-            "Error output: " + (streams[:stderr].string.empty? ? "(none)" : streams[:stderr].string)
+            "Error output: #{format_input_output(streams[:stderr].string)}"
         end
       end
 
@@ -401,6 +399,10 @@ module Cheetah
       end
 
       "\"#{formatted_commands.join(" | ")}\""
+    end
+
+    def format_input_output(s)
+      s.empty? ? "(none)" : s
     end
   end
 
