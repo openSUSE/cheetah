@@ -199,10 +199,7 @@ module Cheetah
       options = BUILTIN_DEFAULT_OPTIONS.merge(@default_options).merge(options)
 
       streamed = compute_streamed(options)
-
-      stdin  = streamed[:stdin]  ? options[:stdin]  : StringIO.new(options[:stdin])
-      stdout = streamed[:stdout] ? options[:stdout] : StringIO.new("")
-      stderr = streamed[:stderr] ? options[:stderr] : StringIO.new("")
+      streams = build_streams(options, streamed)
 
       logger = LogAdapter.new(options[:logger],
         options[:logger_level_info],
@@ -254,7 +251,10 @@ module Cheetah
       #
       # Similar issues can happen with standard input vs. one of the outputs.
       stdin_buffer = ""
-      outputs = { pipes[:stdout][READ] => stdout, pipes[:stderr][READ] => stderr }
+      outputs = {
+        pipes[:stdout][READ] => streams[:stdout],
+        pipes[:stderr][READ] => streams[:stderr]
+      }
       pipes_readable = [pipes[:stdout][READ], pipes[:stderr][READ]]
       pipes_writable = [pipes[:stdin][WRITE]]
       loop do
@@ -279,7 +279,7 @@ module Cheetah
         end
 
         ios_write.each do |pipe|
-          stdin_buffer = stdin.read(4096) if stdin_buffer.empty?
+          stdin_buffer = streams[:stdin].read(4096) if stdin_buffer.empty?
           if !stdin_buffer
             pipe.close
             next
@@ -296,8 +296,8 @@ module Cheetah
           raise ExecutionFailed.new(
             commands,
             status,
-            streamed[:stdout] ? nil : stdout.string,
-            streamed[:stderr] ? nil : stderr.string,
+            streamed[:stdout] ? nil : streams[:stdout].string,
+            streamed[:stderr] ? nil : streams[:stderr].string,
             "Execution of command #{format_commands(commands)} " +
               "failed with status #{status.exitstatus}."
           )
@@ -307,11 +307,11 @@ module Cheetah
           "Status: #{status.exitstatus}"
         unless streamed[:stdout]
           logger.info "Standard output: " +
-            (stdout.string.empty? ? "(none)" : stdout.string)
+            (streams[:stdout].string.empty? ? "(none)" : streams[:stdout].string)
         end
         unless streamed[:stderr]
-          logger.send stderr.string.empty? ? :info : :error,
-            "Error output: " + (stderr.string.empty? ? "(none)" : stderr.string)
+          logger.send streams[:stderr].string.empty? ? :info : :error,
+            "Error output: " + (streams[:stderr].string.empty? ? "(none)" : streams[:stderr].string)
         end
       end
 
@@ -319,11 +319,11 @@ module Cheetah
         when [false, false]
           nil
         when [true, false]
-          stdout.string
+          streams[:stdout].string
         when [false, true]
-          stderr.string
+          streams[:stderr].string
         when [true, true]
-          [stdout.string, stderr.string]
+          [streams[:stdout].string, streams[:stderr].string]
       end
     end
 
@@ -337,6 +337,14 @@ module Cheetah
         :stdin  => !options[:stdin].is_a?(String),
         :stdout => ![nil, :capture].include?(options[:stdout]),
         :stderr => ![nil, :capture].include?(options[:stderr])
+      }
+    end
+
+    def build_streams(options, streamed)
+      {
+        :stdin  => streamed[:stdin]  ? options[:stdin]  : StringIO.new(options[:stdin]),
+        :stdout => streamed[:stdout] ? options[:stdout] : StringIO.new(""),
+        :stderr => streamed[:stderr] ? options[:stderr] : StringIO.new("")
       }
     end
 
