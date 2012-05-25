@@ -218,16 +218,7 @@ module Cheetah
         log_output(logger, streams, streamed)
       end
 
-      case [options[:stdout] == :capture, options[:stderr] == :capture]
-        when [false, false]
-          nil
-        when [true, false]
-          streams[:stdout].string
-        when [false, true]
-          streams[:stderr].string
-        when [true, true]
-          [streams[:stdout].string, streams[:stderr].string]
-      end
+      build_result(streams, options)
     end
 
     private
@@ -400,6 +391,19 @@ module Cheetah
           "Execution of command #{format_commands(commands)} " +
             "failed with status #{status.exitstatus}."
         )
+      end
+    end
+
+    def build_result(streams, options)
+      case [options[:stdout] == :capture, options[:stderr] == :capture]
+        when [false, false]
+          nil
+        when [true, false]
+          streams[:stdout].string
+        when [false, true]
+          streams[:stderr].string
+        when [true, true]
+          [streams[:stdout].string, streams[:stderr].string]
       end
     end
 
