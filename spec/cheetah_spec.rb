@@ -285,7 +285,7 @@ describe Cheetah do
       end
 
       it "does not log anything with :logger => nil" do
-        lambda { |logger| Cheetah.run("/bin/true") }.should log("")
+        lambda { |logger| Cheetah.run("/bin/true", :logger => nil) }.should log("")
       end
 
       it "logs a successful execution of a command without arguments" do
