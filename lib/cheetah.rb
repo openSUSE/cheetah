@@ -389,7 +389,7 @@ module Cheetah
           status,
           streamed[:stdout] ? nil : streams[:stdout].string,
           streamed[:stderr] ? nil : streams[:stderr].string,
-          "Execution of command #{format_commands(commands)} " +
+          "Execution of #{format_commands(commands)} " +
             "failed with status #{status.exitstatus}."
         )
       end
@@ -411,7 +411,7 @@ module Cheetah
     # Logging
 
     def log_commands(logger, commands)
-      logger.info "Executing command #{format_commands(commands)}."
+      logger.info "Executing #{format_commands(commands)}."
     end
 
     def log_input(logger, options, streamed)
