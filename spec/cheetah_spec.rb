@@ -390,7 +390,7 @@ describe Cheetah do
         EOT
       end
 
-      it "logs standard input with :stdin set to an IO" do
+      it "does not log standard input with :stdin set to an IO" do
         StringIO.open("") do |stdin|
           lambda { |logger|
             Cheetah.run(@eat_command, :stdin => stdin, :logger => logger)
