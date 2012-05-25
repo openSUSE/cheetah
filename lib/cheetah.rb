@@ -208,55 +208,7 @@ module Cheetah
 
       pid, pipes = fork_commands(commands)
 
-      # We write the command's input and read its output using a select loop.
-      # Why? Because otherwise we could end up with a deadlock.
-      #
-      # Imagine if we first read the whole standard output and then the whole
-      # error output, but the executed command would write lot of data but only
-      # to the error output. Sooner or later it would fill the buffer and block,
-      # while we would be blocked on reading the standard output -- classic
-      # deadlock.
-      #
-      # Similar issues can happen with standard input vs. one of the outputs.
-      stdin_buffer = ""
-      outputs = {
-        pipes[:stdout][READ] => streams[:stdout],
-        pipes[:stderr][READ] => streams[:stderr]
-      }
-      pipes_readable = [pipes[:stdout][READ], pipes[:stderr][READ]]
-      pipes_writable = [pipes[:stdin][WRITE]]
-      loop do
-        pipes_readable.reject!(&:closed?)
-        pipes_writable.reject!(&:closed?)
-
-        break if pipes_readable.empty? && pipes_writable.empty?
-
-        ios_read, ios_write, ios_error = select(pipes_readable, pipes_writable,
-          pipes_readable + pipes_writable)
-
-        if !ios_error.empty?
-          raise IOError, "Error when communicating with executed program."
-        end
-
-        ios_read.each do |pipe|
-          begin
-            outputs[pipe] << pipe.readpartial(4096)
-          rescue EOFError
-            pipe.close
-          end
-        end
-
-        ios_write.each do |pipe|
-          stdin_buffer = streams[:stdin].read(4096) if stdin_buffer.empty?
-          if !stdin_buffer
-            pipe.close
-            next
-          end
-
-          n = pipe.syswrite(stdin_buffer)
-          stdin_buffer = stdin_buffer[n..-1]
-        end
-      end
+      select_loop(streams, pipes)
 
       pid, status = Process.wait2(pid)
       begin
@@ -393,6 +345,58 @@ module Cheetah
       ].each(&:close)
 
       [pid, pipes]
+    end
+
+    def select_loop(streams, pipes)
+      # We write the command's input and read its output using a select loop.
+      # Why? Because otherwise we could end up with a deadlock.
+      #
+      # Imagine if we first read the whole standard output and then the whole
+      # error output, but the executed command would write lot of data but only
+      # to the error output. Sooner or later it would fill the buffer and block,
+      # while we would be blocked on reading the standard output -- classic
+      # deadlock.
+      #
+      # Similar issues can happen with standard input vs. one of the outputs.
+      stdin_buffer = ""
+      outputs = {
+        pipes[:stdout][READ] => streams[:stdout],
+        pipes[:stderr][READ] => streams[:stderr]
+      }
+      pipes_readable = [pipes[:stdout][READ], pipes[:stderr][READ]]
+      pipes_writable = [pipes[:stdin][WRITE]]
+      loop do
+        pipes_readable.reject!(&:closed?)
+        pipes_writable.reject!(&:closed?)
+
+        break if pipes_readable.empty? && pipes_writable.empty?
+
+        ios_read, ios_write, ios_error = select(pipes_readable, pipes_writable,
+          pipes_readable + pipes_writable)
+
+        if !ios_error.empty?
+          raise IOError, "Error when communicating with executed program."
+        end
+
+        ios_read.each do |pipe|
+          begin
+            outputs[pipe] << pipe.readpartial(4096)
+          rescue EOFError
+            pipe.close
+          end
+        end
+
+        ios_write.each do |pipe|
+          stdin_buffer = streams[:stdin].read(4096) if stdin_buffer.empty?
+          if !stdin_buffer
+            pipe.close
+            next
+          end
+
+          n = pipe.syswrite(stdin_buffer)
+          stdin_buffer = stdin_buffer[n..-1]
+        end
+      end
     end
 
     def log_commands(logger, commands)
