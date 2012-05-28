@@ -1,5 +1,6 @@
 require "logger"
 require "shellwords"
+require "stringio"
 
 # A simple library for executing external commands safely and conveniently.
 #
