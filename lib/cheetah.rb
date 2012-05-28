@@ -66,18 +66,49 @@ module Cheetah
     end
   end
 
-  # @private
-  class LogAdapter
-    def initialize(logger, level_info, level_error)
-      @logger, @level_info, @level_error = logger, level_info, level_error
+  # Class used to track executing of command to given logger
+  class CommandRecorder
+    def self.format_commands(commands)
+      formatted_commands = commands.map { |command| Shellwords.join command }
+      "\"#{formatted_commands.join(" | ")}\""
     end
 
-    def info(message)
-      @logger.add(@level_info, message) if @logger
+    def initialize(logger)
+      @logger = logger
     end
 
-    def error(message)
-      @logger.add(@level_error, message) if @logger
+    def commands(commands)
+      return unless @logger
+      @logger.info "Executing #{self.class.format_commands(commands)}."
+    end
+
+    def input(input)
+      return unless @logger
+      if input.is_a? String        
+        @logger.info "Standard input: #{format_input_output(options[:stdin])}"
+      end
+    end
+
+    def status(status)
+      return unless @logger
+      @logger.send status.success? ? :info : :error,
+        "Status: #{status.exitstatus}"
+    end
+
+    def output_streams(streams, streamed)
+      return unless @logger
+      unless streamed[:stdout]
+        @logger.info "Standard output: #{format_input_output(streams[:stdout].string)}"
+      end
+      unless streamed[:stderr]
+        @logger.send streams[:stderr].string.empty? ? :info : :error,
+          "Error output: #{format_input_output(streams[:stderr].string)}"
+      end
+    end
+
+  private
+    def format_input_output(s)
+      s.empty? ? "(none)" : s
     end
   end
 
@@ -87,8 +118,6 @@ module Cheetah
     :stdout             => nil,
     :stderr             => nil,
     :logger             => nil,
-    :logger_level_info  => Logger::INFO,
-    :logger_level_error => Logger::ERROR
   }
 
   READ  = 0 # @private
@@ -201,10 +230,10 @@ module Cheetah
       streamed = compute_streamed(options)
       streams  = build_streams(options, streamed)
       commands = build_commands(args)
-      logger   = build_log_adapter(options)
+      recorder = options[:recorder] || CommandRecorder.new(options[:logger])
 
-      log_commands(logger, commands)
-      log_input(logger, options, streamed)
+      recorder.commands(commands)
+      recorder.input(options[:input])
 
       pid, pipes = fork_commands(commands)
       select_loop(streams, pipes)
@@ -213,8 +242,8 @@ module Cheetah
       begin
         handle_errors(commands, status, streams, streamed)
       ensure
-        log_status(logger, status)
-        log_output(logger, streams, streamed)
+        recorder.status(status)
+        recorder.output_streams(streams, streamed)
       end
 
       build_result(streams, options)
@@ -262,14 +291,6 @@ module Cheetah
       # cases) contains an array of arrays specifying commands and their
       # arguments.
       args.all? { |a| a.is_a?(Array) } ? args : [args]
-    end
-
-    def build_log_adapter(options)
-      LogAdapter.new(
-        options[:logger],
-        options[:logger_level_info],
-        options[:logger_level_error]
-      )
     end
 
     def fork_commands_recursive(commands, pipes)
@@ -389,7 +410,7 @@ module Cheetah
           status,
           streamed[:stdout] ? nil : streams[:stdout].string,
           streamed[:stderr] ? nil : streams[:stderr].string,
-          "Execution of #{format_commands(commands)} " +
+          "Execution of #{CommandRecorder.format_commands(commands)} " +
             "failed with status #{status.exitstatus}."
         )
       end
@@ -408,46 +429,7 @@ module Cheetah
       end
     end
 
-    # Logging
 
-    def log_commands(logger, commands)
-      logger.info "Executing #{format_commands(commands)}."
-    end
-
-    def log_input(logger, options, streamed)
-      unless streamed[:stdin]
-        logger.info "Standard input: #{format_input_output(options[:stdin])}"
-      end
-    end
-
-    def log_status(logger, status)
-      logger.send status.success? ? :info : :error,
-        "Status: #{status.exitstatus}"
-    end
-
-    def log_output(logger, streams, streamed)
-      unless streamed[:stdout]
-        logger.info "Standard output: #{format_input_output(streams[:stdout].string)}"
-      end
-      unless streamed[:stderr]
-        logger.send streams[:stderr].string.empty? ? :info : :error,
-          "Error output: #{format_input_output(streams[:stderr].string)}"
-      end
-    end
-
-    # Formatting
-
-    def format_commands(commands)
-      formatted_commands = commands.map do |command, *args|
-        Shellwords.join([command] + args)
-      end
-
-      "\"#{formatted_commands.join(" | ")}\""
-    end
-
-    def format_input_output(s)
-      s.empty? ? "(none)" : s
-    end
   end
 
   self.default_options = {}
