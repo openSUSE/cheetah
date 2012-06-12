@@ -9,7 +9,7 @@ Examples
 
 ```ruby
 # Run a command and capture its output
-files = Cheetah.run("ls", "-la", :stdout => :capture)
+files = Cheetah.run("ls", "-la", :capture => :stdout)
 
 # Run a command and handle errors
 begin
@@ -65,10 +65,10 @@ File.open("huge_program.py") do |stdin|
 end
 
 # Capture standard output
-files = Cheetah.run("ls", "-la", :stdout => :capture)
+files = Cheetah.run("ls", "-la", :capture => :stdout)
 
 # Capture both standard and error output
-results, errors = Cheetah.run("grep", "-r", "User", ".", :stdout => :capture, :stderr => :capture)
+results, errors = Cheetah.run("grep", "-r", "User", ".", :capture => [ :stdout, :stderr ])
 
 # Capture standard output into a stream
 File.open("files.txt") do |stdout|
