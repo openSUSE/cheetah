@@ -558,7 +558,7 @@ describe Cheetah do
             Cheetah.run("/bin/false")
           }.should raise_error(Cheetah::ExecutionFailed) { |e|
             e.message.should ==
-              "Execution of \"/bin/false\" failed with status 1."
+              "Execution of \"/bin/false\" failed with status 1 (no error output)."
           }
         end
 
@@ -567,7 +567,7 @@ describe Cheetah do
             Cheetah.run("/bin/false", "foo", "bar", "baz")
           }.should raise_error(Cheetah::ExecutionFailed) { |e|
             e.message.should ==
-              "Execution of \"/bin/false foo bar baz\" failed with status 1."
+              "Execution of \"/bin/false foo bar baz\" failed with status 1 (no error output)."
           }
         end
 
@@ -576,9 +576,65 @@ describe Cheetah do
             Cheetah.run(["/bin/true"], ["/bin/true"], ["/bin/false"])
           }.should raise_error(Cheetah::ExecutionFailed) { |e|
             e.message.should ==
-              "Execution of \"/bin/true | /bin/true | /bin/false\" failed with status 1."
+              "Execution of \"/bin/true | /bin/true | /bin/false\" failed with status 1 (no error output)."
           }
         end
+
+        it "raises an exception with a correct message for commands writing no error output" do
+          lambda {
+            Cheetah.run("/bin/false")
+          }.should raise_error(Cheetah::ExecutionFailed) { |e|
+            e.message.should ==
+              "Execution of \"/bin/false\" failed with status 1 (no error output)."
+          }
+        end
+
+        it "raises an exception with a correct message for commands writing one line of error output" do
+          command = create_command(<<-EOT)
+            echo 'one' 1>&2
+            exit 1
+          EOT
+
+          lambda {
+            Cheetah.run(command)
+          }.should raise_error(Cheetah::ExecutionFailed) { |e|
+            e.message.should ==
+              "Execution of \"#{command}\" failed with status 1: one."
+          }
+        end
+
+        it "raises an exception with a correct message for commands writing more lines of error output" do
+          command = create_command(<<-EOT)
+            echo 'one'   1>&2
+            echo 'two'   1>&2
+            echo 'three' 1>&2
+            exit 1
+          EOT
+
+          lambda {
+            Cheetah.run(command)
+          }.should raise_error(Cheetah::ExecutionFailed) { |e|
+            e.message.should ==
+              "Execution of \"#{command}\" failed with status 1: one (...)."
+          }
+        end
+
+        it "raises an exception with a correct message for commands writing an error output with :stderr set to an IO" do
+          command = create_command(<<-EOT)
+            echo -n 'error' 1>&2
+            exit 1
+          EOT
+
+          lambda {
+            StringIO.open("", "w") do |stderr|
+              Cheetah.run(command, :stderr => stderr)
+            end
+          }.should raise_error(Cheetah::ExecutionFailed) { |e|
+            e.message.should ==
+              "Execution of \"#{command}\" failed with status 1 (unknown error output)."
+          }
+        end
+
       end
 
       describe "output capturing" do

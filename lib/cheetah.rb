@@ -411,13 +411,22 @@ module Cheetah
 
     def handle_errors(commands, status, streams, streamed)
       if !status.success?
+        stderr_part = if streamed[:stderr]
+          " (unknown error output)"
+        elsif streams[:stderr].string.empty?
+          " (no error output)"
+        else
+          lines = streams[:stderr].string.split("\n")
+          ": " + lines.first + (lines.size > 1 ? " (...)" : "")
+        end
+
         raise ExecutionFailed.new(
           commands,
           status,
           streamed[:stdout] ? nil : streams[:stdout].string,
           streamed[:stderr] ? nil : streams[:stderr].string,
           "Execution of #{format_commands(commands)} " +
-            "failed with status #{status.exitstatus}."
+            "failed with status #{status.exitstatus}#{stderr_part}."
         )
       end
     end
