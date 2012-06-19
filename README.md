@@ -49,36 +49,63 @@ First, require the library:
 require "cheetah"
 ```
 
-You can now use the `Cheetah.run` method to run commands, pass them an input and
-capture their output:
+You can now use the `Cheetah.run` method to run commands.
+
+### Running Commands
+
+To run a command, just specify it together with its arguments:
 
 ```ruby
-# Run a command with arguments
 Cheetah.run("tar", "xzf", "foo.tar.gz")
+```
+### Passing Input
 
-# Pass an input (as a string)
+Using the `:stdin` option you can pass a string to command's standard input:
+
+```ruby
 Cheetah.run("python", :stdin => source_code)
+```
 
-# Pass an input (as a stream)
+If the input is big you may want to avoid passing it in one huge string. In that
+case, pass an `IO` as a value of the `:stdin` option. The command will read its
+input from it gradually.
+
+```ruby
 File.open("huge_program.py") do |stdin|
   Cheetah.run("python", :stdin => stdin)
 end
+```
 
-# Capture standard output
+### Capturing Output
+
+To capture command's standard output, set the `:stdout` option to `:capture`.
+You will receive the output as a return value of the call:
+
+```ruby
 files = Cheetah.run("ls", "-la", :stdout => :capture)
+```
 
-# Capture both standard and error output
+The same technique works with the error output — just use the `:stderr` option.
+If you specify capturing of both outputs, the return value will be a two-element
+array:
+
+```ruby
 results, errors = Cheetah.run("grep", "-r", "User", ".", :stdout => :capture, :stderr => :capture)
+```
 
-# Capture standard output into a stream
-File.open("files.txt") do |stdout|
+If the output is big you may want to avoid capturing it into a huge string. In
+that case, pass an `IO` as a value of the `:stdout` or `:stderr` option. The
+command will write its output into it gradually.
+
+```ruby
+File.open("files.txt", "w") do |stdout|
   Cheetah.run("ls", "-la", :stdout => stdout)
 end
 ```
+### Error Handling
 
 If the command can't be executed for some reason or returns a non-zero exit
-status, the method raises an exception with detailed information about the
-failure:
+status, Cheetah raises an exception with detailed information about the failure:
 
 ```ruby
 # Run a command and handle errors
@@ -90,24 +117,28 @@ rescue Cheetah::ExecutionFailed => e
   puts "Error ouptut:    #{e.stderr}"
 end
 ```
+### Logging
 
-For debugging purposes, you can also use a logger. Cheetah will log the command,
-its status, input and both outputs to it. By default, the `Logger::INFO` level
-will be used for normal messages and the `Logger::ERROR` level for messages
-about errors (non-zero exit status or non-empty error output), but this can be
-changed if needed:
+For debugging purposes, you can use a logger. Cheetah will log the command, its
+status, input and both outputs to it:
 
 ```ruby
-# Log the execution
 Cheetah.run("ls -l", :logger => logger)
+```
 
-# Change levels of logged messages
+By default, the `Logger::INFO` level will be used for normal messages and the
+`Logger::ERROR` level for messages about errors (non-zero exit status or
+non-empty error output), but this can be changed if needed:
+
+```ruby
 Cheetah.run("ls -l",
   :logger             => logger,
   :logger_level_info  => Logger::DEBUG,
   :logger_level_error => Logger::WARN
 )
 ```
+
+### Setting Defaults
 
 To avoid repetition, you can set global default value of any option passed too
 `Cheetah.run`:
@@ -120,6 +151,8 @@ Cheetah.run("make")
 Cheetah.run("make", "install")
 Cheetah.default_options = {}
 ```
+
+### More Information
 
 For more information, see the
 [API documentation](http://rubydoc.info/github/openSUSE/cheetah/frames).
