@@ -113,24 +113,26 @@ module Cheetah
     # @return [Hash] the default options of the {Cheetah.run} method
     attr_accessor :default_options
 
-    # Runs an external command with specified arguments, optionally passing it
-    # an input and capturing its output.
+    # Runs external command(s) with specified arguments.
     #
-    # If the command execution succeeds, the returned value depends on the value
-    # of the `:stdout` and `:stderr` options (see below). If the command can't
-    # be executed for some reason or returns a non-zero exit status, the method
-    # raises an {ExecutionFailed} exception with detailed information about the
-    # failure.
+    # If the execution succeeds, the returned value depends on the value of the
+    # `:stdout` and `:stderr` options (see below). If the execution fails, the
+    # method raises an {ExecutionFailed} exception with detailed information
+    # about the failure. (In the single command case, the execution succeeds if
+    # the command can be executed and returns a zero exit status. In the
+    # multiple command case, the execution succeeds if the last command can be
+    # executed and returns a zero exit status.)
     #
-    # The command and its arguments never undergo shell expansion — they are
+    # Commands and their arguments never undergo shell expansion — they are
     # passed directly to the operating system. While this may create some
     # inconvenience in certain cases, it eliminates a whole class of security
     # bugs.
     #
-    # The command execution can be logged using a logger passed in the `:logger`
-    # option. If a logger is set, the method will log the command, its status,
-    # input and both outputs to it (the outputs are not logged if they are
-    # streamed into an `IO` — see the `:stdout` and `:stderr` options).
+    # The execution can be logged using a logger passed in the `:logger` option.
+    # If a logger is set, the method will log the executed command(s), final
+    # exit status, passed input and both captured outputs (the outputs are not
+    # logged if they are streamed into an `IO` — see the `:stdout` and `:stderr`
+    # options).
     #
     # By default, the `Logger::INFO` level will be used for normal messages and
     # the `Logger::ERROR` level for messages about errors (non-zero exit status
@@ -142,6 +144,8 @@ module Cheetah
     # default value described in the `options` parameter documentation is used.
     #
     # @overload run(command, *args, options = {})
+    #   Runs a command with its arguments specified separately.
+    #
     #   @param [String] command the command to execute
     #   @param [Array<String>] args the command arguments
     #   @param [Hash] options the options to execute the command with
@@ -172,17 +176,38 @@ module Cheetah
     #   @option options [Integer] :logger_level_error (Logger::ERROR) level for
     #     logging error messages; makes sense only if `:logger` is specified
     #
+    #   @example
+    #     Cheetah.run("tar", "xzf", "foo.tar.gz")
+    #
     # @overload run(command_and_args, options = {})
-    #   This variant is useful mainly when building the command and its
-    #   arguments programmatically.
+    #   Runs a command with its arguments specified together. This variant is
+    #   useful mainly when building the command and its arguments
+    #   programmatically.
     #
     #   @param [Array<String>] command_and_args the command to execute (first
     #     element of the array) and its arguments (remaining elements)
     #   @param [Hash] options the options to execute the command with, same as
     #     in the first variant
     #
-    # @raise [ExecutionFailed] when the command can't be executed for some
-    #   reason or returns a non-zero exit status
+    #   @example
+    #     Cheetah.run(["tar", "xzf", "foo.tar.gz"])
+    #
+    # @overload run(*commands_and_args, options = {})
+    #   Runs multiple commands piped togeter. Standard output of each command
+    #   execpt the last one is connected to the standard input of the next
+    #   command. Error outputs are aggregated together.
+    #
+    #   @param [Array<Array<String>>] commands_and_args the commands to execute
+    #     specified as an array of arrays where each item specifies one command
+    #     (first element of the nested array) and its arguments (remaining
+    #     elements)
+    #   @param [Hash] options the options to execute the commands with, same as
+    #     in the first variant
+    #
+    #   @example
+    #     processes = Cheetah.run(["ps", "aux"], ["grep", "ruby"], :stdout => :capture)
+    #
+    # @raise [ExecutionFailed] when the execution fails
     #
     # @example Run a command and capture its output
     #   files = Cheetah.run("ls", "-la", :stdout => capture)
