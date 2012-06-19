@@ -238,7 +238,7 @@ module Cheetah
       pid, status = Process.wait2(pid)
 
       begin
-        handle_errors(commands, status, streams, streamed)
+        check_errors(commands, status, streams, streamed)
       ensure
         log_status(logger, status)
         log_output(logger, streams, streamed)
@@ -409,7 +409,7 @@ module Cheetah
       end
     end
 
-    def handle_errors(commands, status, streams, streamed)
+    def check_errors(commands, status, streams, streamed)
       return if status.success?
 
       stderr_part = if streamed[:stderr]
