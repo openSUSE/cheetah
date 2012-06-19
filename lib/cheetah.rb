@@ -130,9 +130,9 @@ module Cheetah
     #
     # The execution can be logged using a logger passed in the `:logger` option.
     # If a logger is set, the method will log the executed command(s), final
-    # exit status, passed input and both captured outputs (the outputs are not
-    # logged if they are streamed into an `IO` — see the `:stdout` and `:stderr`
-    # options).
+    # exit status, passed input and both captured outputs (unless the `:stdin`,
+    # `:stdout` or `:stderr` option is set to an `IO`, which prevents logging
+    # the corresponding input or output).
     #
     # By default, the `Logger::INFO` level will be used for normal messages and
     # the `Logger::ERROR` level for messages about errors (non-zero exit status
