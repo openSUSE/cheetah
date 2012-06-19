@@ -43,11 +43,11 @@ module Cheetah
     attr_reader :status
 
     # @return [String, nil] the output the executed command wrote to stdout; can
-    #   be `nil` if the output was captured into a stream
+    #   be `nil` if stdout was captured into a stream
     attr_reader :stdout
 
     # @return [String, nil] the output the executed command wrote to stderr; can
-    #   be `nil` if the output was captured into a stream
+    #   be `nil` if stderr was captured into a stream
     attr_reader :stderr
 
     # Initializes a new {ExecutionFailed} instance.
