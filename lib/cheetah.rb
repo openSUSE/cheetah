@@ -7,6 +7,7 @@ require "shellwords"
 #
 #   * Easy passing of command input
 #   * Easy capturing of command output (standard, error, or both)
+#   * Piping commands together
 #   * 100% secure (shell expansion is impossible by design)
 #   * Raises exceptions on errors (no more manual status code checks)
 #   * Optional logging for easy debugging

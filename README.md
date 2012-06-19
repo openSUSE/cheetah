@@ -26,6 +26,7 @@ Features
 
   * Easy passing of command input
   * Easy capturing of command output (standard, error, or both)
+  * Piping commands together
   * 100% secure (shell expansion is impossible by design)
   * Raises exceptions on errors (no more manual status code checks)
   * Optional logging for easy debugging
@@ -102,6 +103,16 @@ File.open("files.txt", "w") do |stdout|
   Cheetah.run("ls", "-la", :stdout => stdout)
 end
 ```
+
+### Piping Commands
+
+You can pipe multiple commands together and execute them as one. Just specify
+the commands together with their arguments as arrays:
+
+```ruby
+processes = Cheetah.run(["ps", "aux"], ["grep", "ruby"], :stdout => :capture)
+```
+
 ### Error Handling
 
 If the command can't be executed for some reason or returns a non-zero exit
