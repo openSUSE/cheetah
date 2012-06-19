@@ -136,7 +136,7 @@ module Cheetah
     #
     # By default, the `Logger::INFO` level will be used for normal messages and
     # the `Logger::ERROR` level for messages about errors (non-zero exit status
-    # or non-empty error output), but this can be changed using the
+    # or non-empty error output). This can be changed using the
     # `:logger_level_info` and `:logger_level_error` options.
     #
     # Values of options not set using the `options` parameter are taken from
