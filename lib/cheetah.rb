@@ -1,3 +1,4 @@
+require "abstract_method"
 require "logger"
 require "shellwords"
 require "stringio"
@@ -69,17 +70,61 @@ module Cheetah
   end
 
   # @private
-  class LogAdapter
+  class Recorder
+    abstract_method :initialize
+    abstract_method :record_commands
+    abstract_method :record_stdin
+    abstract_method :record_status
+    abstract_method :record_stdout
+    abstract_method :record_stderr
+  end
+
+  # @private
+  class NullRecorder < Recorder
+    def initialize(logger);        end
+    def record_commands(commands); end
+    def record_stdin(stdin);       end
+    def record_status(status);     end
+    def record_stdout(stdout);     end
+    def record_stderr(stderr);     end
+  end
+
+  # @private
+  class DefaultRecorder < Recorder
     def initialize(logger)
       @logger = logger
     end
 
-    def info(message)
-      @logger.info(message) if @logger
+    def record_commands(commands)
+      @logger.info "Executing #{format_commands(commands)}."
     end
 
-    def error(message)
-      @logger.error(message) if @logger
+    def record_stdin(stdin)
+      @logger.info "Standard input: #{format_input_output(stdin)}"
+    end
+
+    def record_status(status)
+      @logger.send status.success? ? :info : :error,
+        "Status: #{status.exitstatus}"
+    end
+
+    def record_stdout(stdout)
+      @logger.info "Standard output: #{format_input_output(stdout)}"
+    end
+
+    def record_stderr(stderr)
+      @logger.send stderr.empty? ? :info : :error,
+        "Error output: #{format_input_output(stderr)}"
+    end
+
+    private
+
+    def format_input_output(s)
+      s.empty? ? "(none)" : s
+    end
+
+    def format_commands(commands)
+      '"' + commands.map { |c| Shellwords.join(c) }.join(" | ") + '"'
     end
   end
 
@@ -219,10 +264,10 @@ module Cheetah
       streamed = compute_streamed(options)
       streams  = build_streams(options, streamed)
       commands = build_commands(args)
-      logger   = build_log_adapter(options)
+      recorder = build_recorder(options)
 
-      log_commands(logger, commands)
-      log_input(logger, options, streamed)
+      recorder.record_commands(commands)
+      recorder.record_stdin(streams[:stdin].string) unless streamed[:stdin]
 
       pid, pipes = fork_commands(commands)
       select_loop(streams, pipes)
@@ -231,8 +276,9 @@ module Cheetah
       begin
         check_errors(commands, status, streams, streamed)
       ensure
-        log_status(logger, status)
-        log_output(logger, streams, streamed)
+        recorder.record_status(status)
+        recorder.record_stdout(streams[:stdout].string) unless streamed[:stdout]
+        recorder.record_stderr(streams[:stderr].string) unless streamed[:stderr]
       end
 
       build_result(streams, options)
@@ -282,8 +328,9 @@ module Cheetah
       args.all? { |a| a.is_a?(Array) } ? args : [args]
     end
 
-    def build_log_adapter(options)
-      LogAdapter.new(options[:logger])
+    def build_recorder(options)
+      klass = options[:logger] ? DefaultRecorder : NullRecorder
+      klass.new(options[:logger])
     end
 
     def fork_commands_recursive(commands, pipes)
@@ -431,41 +478,8 @@ module Cheetah
       end
     end
 
-    # Logging
-
-    def log_commands(logger, commands)
-      logger.info "Executing #{format_commands(commands)}."
-    end
-
-    def log_input(logger, options, streamed)
-      unless streamed[:stdin]
-        logger.info "Standard input: #{format_input_output(options[:stdin])}"
-      end
-    end
-
-    def log_status(logger, status)
-      logger.send status.success? ? :info : :error,
-        "Status: #{status.exitstatus}"
-    end
-
-    def log_output(logger, streams, streamed)
-      unless streamed[:stdout]
-        logger.info "Standard output: #{format_input_output(streams[:stdout].string)}"
-      end
-      unless streamed[:stderr]
-        logger.send streams[:stderr].string.empty? ? :info : :error,
-          "Error output: #{format_input_output(streams[:stderr].string)}"
-      end
-    end
-
-    # Formatting
-
     def format_commands(commands)
       '"' + commands.map { |c| Shellwords.join(c) }.join(" | ") + '"'
-    end
-
-    def format_input_output(s)
-      s.empty? ? "(none)" : s
     end
   end
 

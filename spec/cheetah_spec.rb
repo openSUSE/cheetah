@@ -1,5 +1,98 @@
 require "spec_helper"
 
+module Cheetah
+  describe DefaultRecorder do
+    before do
+      @logger = mock
+      @recorder = DefaultRecorder.new(@logger)
+    end
+
+    describe "record_commands" do
+      it "records execution of commands" do
+        @logger.should_receive(:info).with(
+          "Executing \"one foo bar baz | two foo bar baz | three foo bar baz\"."
+        )
+
+        @recorder.record_commands([
+          ["one",   "foo", "bar", "baz"],
+          ["two",   "foo", "bar", "baz"],
+          ["three", "foo", "bar", "baz"]
+        ])
+      end
+
+      it "escapes commands and their arguments" do
+        @logger.should_receive(:info).with(
+          "Executing \"we\\ \\!\\ ir\\ \\$d we\\ \\!\\ ir\\ \\$d we\\ \\!\\ ir\\ \\$d \\<\\|\\>\\$\"."
+        )
+
+        @recorder.record_commands([["we ! ir $d", "we ! ir $d", "we ! ir $d", "<|>$"]])
+      end
+    end
+
+    describe "record_stdin" do
+      it "records empty input" do
+        @logger.should_receive(:info).with("Standard input: (none)")
+
+        @recorder.record_stdin("")
+      end
+
+      it "records non-empty input" do
+        @logger.should_receive(:info).with("Standard input: input")
+
+        @recorder.record_stdin("input")
+      end
+    end
+
+    describe "record_status" do
+      it "records a success" do
+        @logger.should_receive(:info).with("Status: 0")
+
+        # I hate to mock Process::Status but it seems one can't create a new
+        # instance of it without actually running some process, which would be
+        # even worse.
+        @recorder.record_status(mock(:success? => true, :exitstatus => 0))
+      end
+
+      it "records a failure" do
+        @logger.should_receive(:error).with("Status: 1")
+
+        # I hate to mock Process::Status but it seems one can't create a new
+        # instance of it without actually running some process, which would be
+        # even worse.
+        @recorder.record_status(mock(:success? => false, :exitstatus => 1))
+      end
+    end
+
+    describe "record_stdout" do
+      it "records empty output" do
+        @logger.should_receive(:info).with("Standard output: (none)")
+
+        @recorder.record_stdout("")
+      end
+
+      it "records non-empty output" do
+        @logger.should_receive(:info).with("Standard output: output")
+
+        @recorder.record_stdout("output")
+      end
+    end
+
+    describe "record_stderr" do
+      it "records empty output" do
+        @logger.should_receive(:info).with("Error output: (none)")
+
+        @recorder.record_stderr("")
+      end
+
+      it "records non-empty output" do
+        @logger.should_receive(:error).with("Error output: output")
+
+        @recorder.record_stderr("output")
+      end
+    end
+  end
+end
+
 describe Cheetah do
   describe "run" do
     # Fundamental question: To mock or not to mock the actual system interface?

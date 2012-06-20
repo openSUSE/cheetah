@@ -24,6 +24,8 @@ Gem::Specification.new do |s|
     "lib/cheetah.rb"
   ]
 
+  s.add_dependency "abstract_method", "~> 1.2"
+
   s.add_development_dependency "rspec"
   s.add_development_dependency "redcarpet"
   s.add_development_dependency "yard"
