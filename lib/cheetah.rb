@@ -70,16 +70,16 @@ module Cheetah
 
   # @private
   class LogAdapter
-    def initialize(logger, level_info, level_error)
-      @logger, @level_info, @level_error = logger, level_info, level_error
+    def initialize(logger)
+      @logger = logger
     end
 
     def info(message)
-      @logger.add(@level_info, message) if @logger
+      @logger.info(message) if @logger
     end
 
     def error(message)
-      @logger.add(@level_error, message) if @logger
+      @logger.error(message) if @logger
     end
   end
 
@@ -88,9 +88,7 @@ module Cheetah
     :stdin              => "",
     :stdout             => nil,
     :stderr             => nil,
-    :logger             => nil,
-    :logger_level_info  => Logger::INFO,
-    :logger_level_error => Logger::ERROR
+    :logger             => nil
   }
 
   READ  = 0 # @private
@@ -133,12 +131,9 @@ module Cheetah
     # If a logger is set, the method will log the executed command(s), final
     # exit status, passed input and both captured outputs (unless the `:stdin`,
     # `:stdout` or `:stderr` option is set to an `IO`, which prevents logging
-    # the corresponding input or output).
-    #
-    # By default, the `Logger::INFO` level will be used for normal messages and
-    # the `Logger::ERROR` level for messages about errors (non-zero exit status
-    # or non-empty error output). This can be changed using the
-    # `:logger_level_info` and `:logger_level_error` options.
+    # the corresponding input or output). The `Logger::INFO` level will be used
+    # for normal messages and the `Logger::ERROR` level for messages about
+    # errors (non-zero exit status or non-empty error output).
     #
     # Values of options not set using the `options` parameter are taken from
     # {Cheetah.default_options}. If a value is not specified there too, the
@@ -172,10 +167,6 @@ module Cheetah
     #       produces it
     #   @option options [Logger, nil] :logger (nil) logger to log the command
     #     execution
-    #   @option options [Integer] :logger_level_info (Logger::INFO) level for
-    #     logging normal messages; makes sense only if `:logger` is specified
-    #   @option options [Integer] :logger_level_error (Logger::ERROR) level for
-    #     logging error messages; makes sense only if `:logger` is specified
     #
     #   @example
     #     Cheetah.run("tar", "xzf", "foo.tar.gz")
@@ -292,11 +283,7 @@ module Cheetah
     end
 
     def build_log_adapter(options)
-      LogAdapter.new(
-        options[:logger],
-        options[:logger_level_info],
-        options[:logger_level_error]
-      )
+      LogAdapter.new(options[:logger])
     end
 
     def fork_commands_recursive(commands, pipes)
