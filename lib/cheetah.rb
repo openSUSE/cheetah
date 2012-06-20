@@ -474,11 +474,7 @@ module Cheetah
     # Formatting
 
     def format_commands(commands)
-      formatted_commands = commands.map do |command, *args|
-        Shellwords.join([command] + args)
-      end
-
-      "\"#{formatted_commands.join(" | ")}\""
+      '"' + commands.map { |c| Shellwords.join(c) }.join(" | ") + '"'
     end
 
     def format_input_output(s)
