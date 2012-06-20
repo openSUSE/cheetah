@@ -333,7 +333,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run(command, :stdin => "", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing "#@tmp_dir/command".
+          INFO Executing "#{command}".
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: (none)
@@ -348,7 +348,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run(command, :stdin => "blah", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing "#@tmp_dir/command".
+          INFO Executing "#{command}".
           INFO Standard input: blah
           INFO Status: 0
           INFO Standard output: output
@@ -360,7 +360,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run(@eat_command, :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing "#@tmp_dir/eat".
+          INFO Executing "#@eat_command".
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: (none)
@@ -372,7 +372,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run(@eat_command, :stdin => "", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing "#@tmp_dir/eat".
+          INFO Executing "#@eat_command".
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: (none)
@@ -382,7 +382,7 @@ describe Cheetah do
         lambda { |logger|
           Cheetah.run(@eat_command, :stdin => "blah", :logger => logger)
         }.should log(<<-EOT)
-          INFO Executing "#@tmp_dir/eat".
+          INFO Executing "#@eat_command".
           INFO Standard input: blah
           INFO Status: 0
           INFO Standard output: (none)
@@ -395,7 +395,7 @@ describe Cheetah do
           lambda { |logger|
             Cheetah.run(@eat_command, :stdin => stdin, :logger => logger)
           }.should log(<<-EOT)
-            INFO Executing "#@tmp_dir/eat".
+            INFO Executing "#@eat_command".
             INFO Status: 0
             INFO Standard output: (none)
             INFO Error output: (none)
@@ -406,7 +406,7 @@ describe Cheetah do
           lambda { |logger|
             Cheetah.run(@eat_command, :stdin => stdin, :logger => logger)
           }.should log(<<-EOT)
-            INFO Executing "#@tmp_dir/eat".
+            INFO Executing "#@eat_command".
             INFO Status: 0
             INFO Standard output: (none)
             INFO Error output: (none)
@@ -420,7 +420,7 @@ describe Cheetah do
             Cheetah.run(@command, :stdout => stdout, :logger => logger)
           end
         }.should log(<<-EOT)
-          INFO Executing "#@tmp_dir/command".
+          INFO Executing "#@command".
           INFO Standard input: (none)
           INFO Status: 0
           ERROR Error output: error
@@ -433,7 +433,7 @@ describe Cheetah do
             Cheetah.run(@command, :stderr => stderr, :logger => logger)
           end
         }.should log(<<-EOT)
-          INFO Executing "#@tmp_dir/command".
+          INFO Executing "#@command".
           INFO Standard input: (none)
           INFO Status: 0
           INFO Standard output: output
