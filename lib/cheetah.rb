@@ -155,7 +155,7 @@ module Cheetah
         "Error output: #{format_input_output(stderr)}"
     end
 
-    private
+    protected
 
     def format_input_output(s)
       s.empty? ? "(none)" : s
