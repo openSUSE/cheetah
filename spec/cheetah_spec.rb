@@ -361,192 +361,65 @@ describe Cheetah do
     end
 
     describe "logging" do
-      before do
-        @command = create_command(<<-EOT)
-          echo -n 'output'
-          echo -n 'error' 1>&2
-        EOT
-        @eat_command = create_command(<<-EOT, :name => "eat")
-          while read line; do
-            true
-          done
-        EOT
+      it "uses the default recorder with no :recorder option" do
+        logger = mock
+        logger.should_receive(:info).with("Executing \"/bin/true\".")
+        logger.should_receive(:info).with("Standard input: (none)")
+        logger.should_receive(:info).with("Status: 0")
+        logger.should_receive(:info).with("Standard output: (none)")
+        logger.should_receive(:info).with("Error output: (none)")
+
+        Cheetah.run("/bin/true", :logger => logger)
       end
 
-      it "does not log anything with no :logger option" do
-        lambda { |logger| Cheetah.run("/bin/true") }.should log("")
-      end
+      it "uses the passed recorder with a :recorder option" do
+        recorder = mock
+        recorder.should_receive(:record_commands).with([["/bin/true"]])
+        recorder.should_receive(:record_stdin).with("")
+        recorder.should_receive(:record_status)
+        recorder.should_receive(:record_stdout).with("")
+        recorder.should_receive(:record_stderr).with("")
 
-      it "does not log anything with :logger => nil" do
-        lambda { |logger| Cheetah.run("/bin/true", :logger => nil) }.should log("")
-      end
-
-      it "logs a successful execution of a command without arguments" do
-        lambda { |logger|
-          Cheetah.run("/bin/true", :logger => logger)
-        }.should log(<<-EOT)
-          INFO Executing "/bin/true".
-          INFO Standard input: (none)
-          INFO Status: 0
-          INFO Standard output: (none)
-          INFO Error output: (none)
-        EOT
-      end
-
-      it "logs a successful execution of a command with arguments" do
-        lambda { |logger|
-          Cheetah.run("/bin/true", "foo", "bar", "baz", :logger => logger)
-        }.should log(<<-EOT)
-          INFO Executing "/bin/true foo bar baz".
-          INFO Standard input: (none)
-          INFO Status: 0
-          INFO Standard output: (none)
-          INFO Error output: (none)
-        EOT
-      end
-
-      it "logs a successful execution of piped commands" do
-        lambda { |logger|
-          Cheetah.run(["/bin/true"], ["/bin/true"], ["/bin/true"], :logger => logger)
-        }.should log(<<-EOT)
-          INFO Executing "/bin/true | /bin/true | /bin/true".
-          INFO Standard input: (none)
-          INFO Status: 0
-          INFO Standard output: (none)
-          INFO Error output: (none)
-        EOT
-      end
-
-      it "logs a successful execution of a command producing output" do
-        command = create_command(<<-EOT)
-          echo -n ''
-          echo -n '' 1>&2
-        EOT
-
-        lambda { |logger|
-          Cheetah.run(command, :stdin => "", :logger => logger)
-        }.should log(<<-EOT)
-          INFO Executing "#{command}".
-          INFO Standard input: (none)
-          INFO Status: 0
-          INFO Standard output: (none)
-          INFO Error output: (none)
-        EOT
-
-        command = create_command(<<-EOT)
-          echo -n 'output'
-          echo -n 'error' 1>&2
-        EOT
-
-        lambda { |logger|
-          Cheetah.run(command, :stdin => "blah", :logger => logger)
-        }.should log(<<-EOT)
-          INFO Executing "#{command}".
-          INFO Standard input: blah
-          INFO Status: 0
-          INFO Standard output: output
-          ERROR Error output: error
-        EOT
-      end
-
-      it "logs standard input with no :stdin option" do
-        lambda { |logger|
-          Cheetah.run(@eat_command, :logger => logger)
-        }.should log(<<-EOT)
-          INFO Executing "#@eat_command".
-          INFO Standard input: (none)
-          INFO Status: 0
-          INFO Standard output: (none)
-          INFO Error output: (none)
-        EOT
-      end
-
-      it "logs standard input with :stdin set to a string" do
-        lambda { |logger|
-          Cheetah.run(@eat_command, :stdin => "", :logger => logger)
-        }.should log(<<-EOT)
-          INFO Executing "#@eat_command".
-          INFO Standard input: (none)
-          INFO Status: 0
-          INFO Standard output: (none)
-          INFO Error output: (none)
-        EOT
-
-        lambda { |logger|
-          Cheetah.run(@eat_command, :stdin => "blah", :logger => logger)
-        }.should log(<<-EOT)
-          INFO Executing "#@eat_command".
-          INFO Standard input: blah
-          INFO Status: 0
-          INFO Standard output: (none)
-          INFO Error output: (none)
-        EOT
+        Cheetah.run("/bin/true", :recorder => recorder)
       end
 
       it "does not log standard input with :stdin set to an IO" do
-        StringIO.open("") do |stdin|
-          lambda { |logger|
-            Cheetah.run(@eat_command, :stdin => stdin, :logger => logger)
-          }.should log(<<-EOT)
-            INFO Executing "#@eat_command".
-            INFO Status: 0
-            INFO Standard output: (none)
-            INFO Error output: (none)
-          EOT
-        end
+        recorder = mock
+        recorder.should_receive(:record_commands).with([["/bin/true"]])
+        recorder.should_not_receive(:record_stdin)
+        recorder.should_receive(:record_status)
+        recorder.should_receive(:record_stdout).with("")
+        recorder.should_receive(:record_stderr).with("")
 
-        StringIO.open("blah") do |stdin|
-          lambda { |logger|
-            Cheetah.run(@eat_command, :stdin => stdin, :logger => logger)
-          }.should log(<<-EOT)
-            INFO Executing "#@eat_command".
-            INFO Status: 0
-            INFO Standard output: (none)
-            INFO Error output: (none)
-          EOT
+        StringIO.open("input") do |stdin|
+          Cheetah.run("/bin/true", :recorder => recorder, :stdin => stdin)
         end
       end
 
-      it "does not log standard output with :stdout set to an IO" do
-        lambda { |logger|
-          StringIO.open("", "w") do |stdout|
-            Cheetah.run(@command, :stdout => stdout, :logger => logger)
-          end
-        }.should log(<<-EOT)
-          INFO Executing "#@command".
-          INFO Standard input: (none)
-          INFO Status: 0
-          ERROR Error output: error
-        EOT
+      it "does not log standard output with :stout set to an IO" do
+        recorder = mock
+        recorder.should_receive(:record_commands).with([["/bin/true"]])
+        recorder.should_receive(:record_stdin).with("")
+        recorder.should_receive(:record_status)
+        recorder.should_not_receive(:record_stdout)
+        recorder.should_receive(:record_stderr).with("")
+
+        StringIO.open("output", "w") do |stdout|
+          Cheetah.run("/bin/true", :recorder => recorder, :stdout => stdout)
+        end
       end
 
       it "does not log error output with :stderr set to an IO" do
-        lambda { |logger|
-          StringIO.open("", "w") do |stderr|
-            Cheetah.run(@command, :stderr => stderr, :logger => logger)
-          end
-        }.should log(<<-EOT)
-          INFO Executing "#@command".
-          INFO Standard input: (none)
-          INFO Status: 0
-          INFO Standard output: output
-        EOT
-      end
+        recorder = mock
+        recorder.should_receive(:record_commands).with([["/bin/true"]])
+        recorder.should_receive(:record_stdin).with("")
+        recorder.should_receive(:record_status)
+        recorder.should_receive(:record_stdout).with("")
+        recorder.should_not_receive(:record_stderr)
 
-      it "logs an unsuccessful execution of a command" do
-        lambda { |logger|
-          begin
-            Cheetah.run("/bin/false", :logger => logger)
-          rescue Cheetah::ExecutionFailed
-            # Eat it.
-          end
-        }.should log(<<-EOT)
-          INFO Executing "/bin/false".
-          INFO Standard input: (none)
-          ERROR Status: 1
-          INFO Standard output: (none)
-          INFO Error output: (none)
-        EOT
+        StringIO.open("output", "w") do |stderr|
+          Cheetah.run("/bin/true", :recorder => recorder, :stderr => stderr)
+        end
       end
     end
 

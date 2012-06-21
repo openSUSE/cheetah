@@ -69,17 +69,62 @@ module Cheetah
     end
   end
 
-  # @private
+  # Defines a recorder interface. Recorder is an object that handles recording
+  # of the command execution into a logger. It decides what exactly gets logged,
+  # at what level and using what messages.
+  #
+  # @abstract
   class Recorder
+    # @!method initialize(logger)
+    #   Called to initialize a new {Recorder} instance.
+    #
+    #   @abstract
+    #   @param [Logger] logger the logger to record into
     abstract_method :initialize
+
+    # @!method record_commands(commands)
+    #   Called to record the executed commands.
+    #
+    #   @abstract
+    #   @param [Array<Array<String>>] commands the executed commands as an array
+    #     where each item is again an array containing an executed command in
+    #     the first element and its arguments in the remaining ones
     abstract_method :record_commands
+
+    # @!method record_stdin(stdin)
+    #   Called to record the executed command input (if it wasn't read from a
+    #   stream).
+    #
+    #   @abstract
+    #   @param [String] stdin the executed command input
     abstract_method :record_stdin
+
+    # @!method record_status(status)
+    #   Called to record the executed command exit status.
+    #
+    #   @abstract
+    #   @param [Process::Status] status the executed command exit status
     abstract_method :record_status
+
+    # @!method record_stdout(stdout)
+    #   Called to record the output the executed command wrote to stdout (if it
+    #   wasn't captured into a stream).
+    #
+    #   @abstract
+    #   @param [String] stdout the output the executed command wrote to stdout
     abstract_method :record_stdout
+
+    # @!method record_stderr(stderr)
+    #   Called to record the output the executed command wrote to stderr (if it
+    #   wasn't captured into a stream).
+    #
+    #   @abstract
+    #   @param [String] stderr the output the executed command wrote to stderr
     abstract_method :record_stderr
   end
 
-  # @private
+  # A recorder that does not record anyting. Used by {Cheetah.run} when no
+  # logger is passed.
   class NullRecorder < Recorder
     def initialize(logger);        end
     def record_commands(commands); end
@@ -89,7 +134,9 @@ module Cheetah
     def record_stderr(stderr);     end
   end
 
-  # @private
+  # A default recorder. It uses the `Logger::INFO` level for normal messages and
+  # the `Logger::ERROR` level for messages about errors (non-zero exit status or
+  # non-empty error output). Used by {Cheetah.run} when a logger is passed.
   class DefaultRecorder < Recorder
     def initialize(logger)
       @logger = logger
@@ -176,9 +223,14 @@ module Cheetah
     # If a logger is set, the method will log the executed command(s), final
     # exit status, passed input and both captured outputs (unless the `:stdin`,
     # `:stdout` or `:stderr` option is set to an `IO`, which prevents logging
-    # the corresponding input or output). The `Logger::INFO` level will be used
-    # for normal messages and the `Logger::ERROR` level for messages about
-    # errors (non-zero exit status or non-empty error output).
+    # the corresponding input or output).
+    #
+    # The actual logging is handled by a separate object called recorder. By
+    # default, {DefaultRecorder} instance is used. It uses the `Logger::INFO`
+    # level for normal messages and the `Logger::ERROR` level for messages about
+    # errors (non-zero exit status or non-empty error output). If you need to
+    # customize the recording, you can create your own recorder (implementing
+    # the {Recorder} interface) and pass it in the `:recorder` option.
     #
     # Values of options not set using the `options` parameter are taken from
     # {Cheetah.default_options}. If a value is not specified there too, the
@@ -212,6 +264,8 @@ module Cheetah
     #       produces it
     #   @option options [Logger, nil] :logger (nil) logger to log the command
     #     execution
+    #   @option options [Recorder, nil] :recorder (DefaultRecorder.new) recorder
+    #     to handle the command execution logging
     #
     #   @example
     #     Cheetah.run("tar", "xzf", "foo.tar.gz")
@@ -329,8 +383,12 @@ module Cheetah
     end
 
     def build_recorder(options)
-      klass = options[:logger] ? DefaultRecorder : NullRecorder
-      klass.new(options[:logger])
+      if options[:recorder]
+        options[:recorder]
+      else
+        klass = options[:logger] ? DefaultRecorder : NullRecorder
+        klass.new(options[:logger])
+      end
     end
 
     def fork_commands_recursive(commands, pipes)

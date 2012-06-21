@@ -21,23 +21,3 @@ RSpec::Matchers.define :write do |output|
     File.read(@file).should == output
   end
 end
-
-def logger_with_io
-  io = StringIO.new
-  logger = Logger.new(io)
-  logger.formatter = lambda { |severity, time, progname, msg|
-    "#{severity} #{progname ? progname + ": " : ""}#{msg}\n"
-  }
-
-  [logger, io]
-end
-
-RSpec::Matchers.define :log do |output|
-  match do |proc|
-    logger, io = logger_with_io
-
-    proc.call(logger)
-
-    io.string.should == output.gsub(/^\s+/, "")
-  end
-end
