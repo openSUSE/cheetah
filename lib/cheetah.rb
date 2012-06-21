@@ -3,6 +3,8 @@ require "logger"
 require "shellwords"
 require "stringio"
 
+require File.expand_path(File.dirname(__FILE__) + "/cheetah/version")
+
 # A simple library for executing external commands safely and conveniently.
 #
 # ## Features
@@ -30,9 +32,6 @@ require "stringio"
 #     puts "Error ouptut:    #{e.stderr}"
 #   end
 module Cheetah
-  # Cheetah version (uses [semantic versioning](http://semver.org/)).
-  VERSION = File.read(File.dirname(__FILE__) + "/../VERSION").strip
-
   # Exception raised when a command execution fails.
   class ExecutionFailed < StandardError
     # @return [Array<Array<String>>] the executed commands as an array where
