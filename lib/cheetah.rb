@@ -504,7 +504,7 @@ module Cheetah
       return if status.success?
 
       stderr_part = if streamed[:stderr]
-        " (unknown error output)"
+        " (error output streamed away)"
       elsif streams[:stderr].string.empty?
         " (no error output)"
       else

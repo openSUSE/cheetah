@@ -569,7 +569,7 @@ describe Cheetah do
             end
           }.should raise_error(Cheetah::ExecutionFailed) { |e|
             e.message.should ==
-              "Execution of \"#{command}\" failed with status 1 (unknown error output)."
+              "Execution of \"#{command}\" failed with status 1 (error output streamed away)."
           }
         end
 
