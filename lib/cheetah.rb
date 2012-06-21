@@ -280,9 +280,8 @@ module Cheetah
     #   command. Error outputs are aggregated together.
     #
     #   @param [Array<Array<String>>] commands_and_args the commands to execute
-    #     specified as an array of arrays where each item specifies one command
-    #     (first element of the nested array) and its arguments (remaining
-    #     elements)
+    #     as an array where each item is again an array containing an executed
+    #     command in the first element and its arguments in the remaining ones
     #   @param [Hash] options the options to execute the commands with, same as
     #     in the first variant
     #
