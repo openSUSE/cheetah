@@ -5,7 +5,8 @@ require "stringio"
 
 require File.expand_path(File.dirname(__FILE__) + "/cheetah/version")
 
-# A simple library for executing external commands safely and conveniently.
+# Your swiss army knife for executing external commands in Ruby safely and
+# conveniently.
 #
 # ## Features
 #

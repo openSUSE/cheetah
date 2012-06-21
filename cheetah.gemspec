@@ -5,11 +5,8 @@ require File.expand_path(File.dirname(__FILE__) + "/lib/cheetah/version")
 Gem::Specification.new do |s|
   s.name        = "cheetah"
   s.version     = Cheetah::VERSION
-  s.summary     = "Simple library for executing external commands safely and conveniently"
-  s.description = <<-EOT.split("\n").map(&:strip).join(" ")
-    Cheetah is a simple library for executing external commands safely and
-    conveniently.
-  EOT
+  s.summary     = "Your swiss army knife for executing external commands in Ruby safely and conveniently."
+  s.description = "Your swiss army knife for executing external commands in Ruby safely and conveniently."
 
   s.author      = "David Majda"
   s.email       = "dmajda@suse.de"

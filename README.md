@@ -1,7 +1,7 @@
 Cheetah
 =======
 
-Cheetah is a simple library for executing external commands safely and
+Your swiss army knife for executing external commands in Ruby safely and
 conveniently.
 
 Examples
