@@ -24,6 +24,11 @@ require File.expand_path(File.dirname(__FILE__) + "/cheetah/version")
 # @example Run a command and capture its output
 #   files = Cheetah.run("ls", "-la", :stdout => :capture)
 #
+# @example Run a command and capture its output into a stream
+#   File.open("files.txt", "w") do |stdout|
+#     Cheetah.run("ls", "-la", :stdout => stdout)
+#   end
+#
 # @example Run a command and handle errors
 #   begin
 #     Cheetah.run("rm", "/etc/passwd")
@@ -293,6 +298,11 @@ module Cheetah
     #
     # @example Run a command and capture its output
     #   files = Cheetah.run("ls", "-la", :stdout => capture)
+    #
+    # @example Run a command and capture its output into a stream
+    #   File.open("files.txt", "w") do |stdout|
+    #     Cheetah.run("ls", "-la", :stdout => stdout)
+    #   end
     #
     # @example Run a command and handle errors
     #   begin
