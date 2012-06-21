@@ -1,3 +1,21 @@
+0.3.0 (2012-06-21)
+------------------
+
+* Allowed passing an IO in the :stdin option.
+* Replaced the :capture option with :stdout and :stderr and allowed streaming
+  standard and error output into an IO.
+* Implemented support for piped commands.
+* Implemented the :recorder option allowing to customize logging.
+* Replaced Cheetah.logger with more generic Cheetah.default_options.
+* Commands in logs and exception messages are now directly copy-pastable into
+  the shell.
+* Officially supports Ruby 1.8.7 and 1.9.3 on Unix systems.
+* Added Travis CI integration.
+* Various internal code improvements and fixes.
+* Improved gem description and summary.
+* Improved documentation.
+* Improved README.md.
+
 0.2.1 (2012-04-12)
 ------------------
 
