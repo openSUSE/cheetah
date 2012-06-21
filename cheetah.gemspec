@@ -21,7 +21,7 @@ Gem::Specification.new do |s|
     "LICENSE",
     "README.md",
     "VERSION",
-    "lib/cheetah.rb"
+    "lib/cheetah.rb",
     "lib/cheetah/version.rb"
   ]
 
