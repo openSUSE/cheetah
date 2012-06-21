@@ -162,3 +162,9 @@ Compatibility
 Cheetah should run well on any Unix system with Ruby 1.8.7 or 1.9.3. Non-Unix
 systems and different Ruby implementations/versions may work too but they were
 not tested.
+
+Authors
+-------
+
+  * [David Majda](http://github.com/dmajda)
+  * [Josef Reidinger](http://github.com/jreidinger)
