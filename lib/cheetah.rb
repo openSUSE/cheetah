@@ -74,13 +74,6 @@ module Cheetah
   #
   # @abstract
   class Recorder
-    # @!method initialize(logger)
-    #   Called to initialize a new {Recorder} instance.
-    #
-    #   @abstract
-    #   @param [Logger] logger the logger to record into
-    abstract_method :initialize
-
     # @!method record_commands(commands)
     #   Called to record the executed commands.
     #
@@ -125,7 +118,6 @@ module Cheetah
   # A recorder that does not record anyting. Used by {Cheetah.run} when no
   # logger is passed.
   class NullRecorder < Recorder
-    def initialize(logger);        end
     def record_commands(commands); end
     def record_stdin(stdin);       end
     def record_status(status);     end
@@ -385,8 +377,7 @@ module Cheetah
       if options[:recorder]
         options[:recorder]
       else
-        klass = options[:logger] ? DefaultRecorder : NullRecorder
-        klass.new(options[:logger])
+        options[:logger] ? DefaultRecorder.new(options[:logger]) : NullRecorder.new
       end
     end
 
