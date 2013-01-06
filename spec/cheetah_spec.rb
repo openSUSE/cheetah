@@ -558,6 +558,12 @@ describe Cheetah do
             e.status.exitstatus.should == 1
           }
         end
+
+        it "does not raise an exception when the non-zero status is allowed by allowstatus option" do
+          lambda {
+            Cheetah.run("/bin/false", "foo", "bar", "baz", :allowstatus => 1)
+          }.should_not raise_error(Cheetah::ExecutionFailed)
+        end
       end
 
       describe "piped commands" do

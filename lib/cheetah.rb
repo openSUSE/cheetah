@@ -361,7 +361,7 @@ module Cheetah
       pid, status = Process.wait2(pid)
 
       begin
-        check_errors(commands, status, streams, streamed)
+        check_errors(commands, status, streams, streamed, options)
       ensure
         recorder.record_status(status)
       end
@@ -540,8 +540,8 @@ module Cheetah
       end
     end
 
-    def check_errors(commands, status, streams, streamed)
-      return if status.success?
+    def check_errors(commands, status, streams, streamed, options)
+      return if status.success? || (options[:allowstatus] && [*options[:allowstatus]].include?(status.exitstatus))
 
       stderr_part = if streamed[:stderr]
         " (error output streamed away)"
