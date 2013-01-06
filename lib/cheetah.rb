@@ -37,6 +37,9 @@ require File.expand_path(File.dirname(__FILE__) + "/cheetah/version")
 #     puts "Standard output: #{e.stdout}"
 #     puts "Error ouptut:    #{e.stderr}"
 #   end
+#
+# @example Run a command and allow nonzero exit status
+#   Cheetah.run("/bin/false", :allowstatus => 1)
 module Cheetah
   # Exception raised when a command execution fails.
   class ExecutionFailed < StandardError
@@ -237,12 +240,13 @@ module Cheetah
     # Runs external command(s) with specified arguments.
     #
     # If the execution succeeds, the returned value depends on the value of the
-    # `:stdout` and `:stderr` options (see below). If the execution fails, the
-    # method raises an {ExecutionFailed} exception with detailed information
-    # about the failure. (In the single command case, the execution succeeds if
-    # the command can be executed and returns a zero exit status. In the
-    # multiple command case, the execution succeeds if the last command can be
-    # executed and returns a zero exit status.)
+    # `:stdout` and `:stderr` options (see below). If the execution fails, and
+    # the command's exit status is not explictly allowed by the allowstatus
+    # option, the method raises an {ExecutionFailed} exception with detailed
+    # information about the failure. (In the single command case, the execution
+    # succeeds if the command can be executed and returns a zero exit status.
+    # In the multiple command case, the execution succeeds if the last command
+    # can be executed and returns a zero exit status.)
     #
     # Commands and their arguments never undergo shell expansion — they are
     # passed directly to the operating system. While this may create some
@@ -296,6 +300,8 @@ module Cheetah
     #     execution
     #   @option options [Recorder, nil] :recorder (DefaultRecorder.new) recorder
     #     to handle the command execution logging
+    #   @option options [Array<Fixnum>, Fixnum] :allowstatus (nil) allows
+    #     command to exit with a (nonzero) exit status
     #
     #   @example
     #     Cheetah.run("tar", "xzf", "foo.tar.gz")
@@ -345,6 +351,9 @@ module Cheetah
     #     puts "Standard output: #{e.stdout}"
     #     puts "Error ouptut:    #{e.stderr}"
     #   end
+    #
+    # @example Run a command and allow nonzero exit status
+    #   Cheetah.run("/bin/false", :allowstatus => 1)
     def run(*args)
       options = args.last.is_a?(Hash) ? args.pop : {}
       options = BUILTIN_DEFAULT_OPTIONS.merge(@default_options).merge(options)

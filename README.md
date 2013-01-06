@@ -24,6 +24,9 @@ rescue Cheetah::ExecutionFailed => e
   puts "Standard output: #{e.stdout}"
   puts "Error ouptut:    #{e.stderr}"
 end
+
+# Run a command and allow nonzero exit status
+Cheetah.run("/bin/false", :allowstatus => 1)
 ```
 
 Features
@@ -121,7 +124,8 @@ processes = Cheetah.run(["ps", "aux"], ["grep", "ruby"], :stdout => :capture)
 ### Error Handling
 
 If the command can't be executed for some reason or returns a non-zero exit
-status, Cheetah raises an exception with detailed information about the failure:
+status, and  the command's exit status is not explictly allowed by the allowstatus
+option, Cheetah raises an exception with detailed information about the failure:
 
 ```ruby
 # Run a command and handle errors
@@ -133,6 +137,13 @@ rescue Cheetah::ExecutionFailed => e
   puts "Error ouptut:    #{e.stderr}"
 end
 ```
+
+
+```ruby
+# Run a command and allow nonzero exit status
+Cheetah.run("/bin/false", :allowstatus => 1)
+```
+
 ### Logging
 
 For debugging purposes, you can use a logger. Cheetah will log the command, its
