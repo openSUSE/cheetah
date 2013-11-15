@@ -3,7 +3,7 @@ require "spec_helper"
 module Cheetah
   describe DefaultRecorder do
     before do
-      @logger = mock
+      @logger = double
       @recorder = DefaultRecorder.new(@logger)
     end
 
@@ -50,7 +50,7 @@ module Cheetah
         # I hate to mock Process::Status but it seems one can't create a new
         # instance of it without actually running some process, which would be
         # even worse.
-        @recorder.record_status(mock(:success? => true, :exitstatus => 0))
+        @recorder.record_status(double(:success? => true, :exitstatus => 0))
       end
 
       it "records a failure" do
@@ -59,7 +59,7 @@ module Cheetah
         # I hate to mock Process::Status but it seems one can't create a new
         # instance of it without actually running some process, which would be
         # even worse.
-        @recorder.record_status(mock(:success? => false, :exitstatus => 1))
+        @recorder.record_status(double(:success? => false, :exitstatus => 1))
       end
     end
 
@@ -362,7 +362,7 @@ describe Cheetah do
 
     describe "logging" do
       it "uses the default recorder with no :recorder option" do
-        logger = mock
+        logger = double
         logger.should_receive(:info).with("Executing \"/bin/true\".")
         logger.should_receive(:info).with("Standard input: (none)")
         logger.should_receive(:info).with("Status: 0")
@@ -373,7 +373,7 @@ describe Cheetah do
       end
 
       it "uses the passed recorder with a :recorder option" do
-        recorder = mock
+        recorder = double
         recorder.should_receive(:record_commands).with([["/bin/true"]])
         recorder.should_receive(:record_stdin).with("")
         recorder.should_receive(:record_status)
@@ -384,7 +384,7 @@ describe Cheetah do
       end
 
       it "does not log standard input with :stdin set to an IO" do
-        recorder = mock
+        recorder = double
         recorder.should_receive(:record_commands).with([["/bin/true"]])
         recorder.should_not_receive(:record_stdin)
         recorder.should_receive(:record_status)
@@ -397,7 +397,7 @@ describe Cheetah do
       end
 
       it "does not log standard output with :stout set to an IO" do
-        recorder = mock
+        recorder = double
         recorder.should_receive(:record_commands).with([["/bin/true"]])
         recorder.should_receive(:record_stdin).with("")
         recorder.should_receive(:record_status)
@@ -410,7 +410,7 @@ describe Cheetah do
       end
 
       it "does not log error output with :stderr set to an IO" do
-        recorder = mock
+        recorder = double
         recorder.should_receive(:record_commands).with([["/bin/true"]])
         recorder.should_receive(:record_stdin).with("")
         recorder.should_receive(:record_status)
