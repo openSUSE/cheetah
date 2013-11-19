@@ -90,12 +90,29 @@ module Cheetah
     abstract_method :record_commands
 
     # @!method record_stdin(stdin)
-    #   Called to record the executed command input (if it wasn't read from a
-    #   stream).
+    #   Called to record part of the executed command input.
     #
     #   @abstract
-    #   @param [String] stdin the executed command input
+    #   @param [String] stdin part of the executed command input
     abstract_method :record_stdin
+
+    # @!method record_stdout(stdout)
+    #   Called to record part of the output the executed command wrote to
+    #   stdout.
+    #
+    #   @abstract
+    #   @param [String] stdout part of the output the executed command wrote to
+    #     stdout
+    abstract_method :record_stdout
+
+    # @!method record_stderr(stderr)
+    #   Called to record part of the output the executed command wrote to
+    #   stderr.
+    #
+    #   @abstract
+    #   @param [String] stderr part of the output the executed command wrote to
+    #     stderr
+    abstract_method :record_stderr
 
     # @!method record_status(status)
     #   Called to record the executed command exit status.
@@ -103,22 +120,6 @@ module Cheetah
     #   @abstract
     #   @param [Process::Status] status the executed command exit status
     abstract_method :record_status
-
-    # @!method record_stdout(stdout)
-    #   Called to record the output the executed command wrote to stdout (if it
-    #   wasn't captured into a stream).
-    #
-    #   @abstract
-    #   @param [String] stdout the output the executed command wrote to stdout
-    abstract_method :record_stdout
-
-    # @!method record_stderr(stderr)
-    #   Called to record the output the executed command wrote to stderr (if it
-    #   wasn't captured into a stream).
-    #
-    #   @abstract
-    #   @param [String] stderr the output the executed command wrote to stderr
-    abstract_method :record_stderr
   end
 
   # A recorder that does not record anyting. Used by {Cheetah.run} when no
@@ -126,17 +127,27 @@ module Cheetah
   class NullRecorder < Recorder
     def record_commands(commands); end
     def record_stdin(stdin);       end
-    def record_status(status);     end
     def record_stdout(stdout);     end
     def record_stderr(stderr);     end
+    def record_status(status);     end
   end
 
   # A default recorder. It uses the `Logger::INFO` level for normal messages and
   # the `Logger::ERROR` level for messages about errors (non-zero exit status or
   # non-empty error output). Used by {Cheetah.run} when a logger is passed.
   class DefaultRecorder < Recorder
+    # @private
+    STREAM_INFO = {
+      :stdin  => { :name => "Standard input",  :method => :info  },
+      :stdout => { :name => "Standard output", :method => :info  },
+      :stderr => { :name => "Error output",    :method => :error }
+    }
+
     def initialize(logger)
       @logger = logger
+
+      @stream_used   = { :stdin => false, :stdout => false, :stderr => false }
+      @stream_buffer = { :stdin => "",    :stdout => "",    :stderr => "" }
     end
 
     def record_commands(commands)
@@ -144,31 +155,53 @@ module Cheetah
     end
 
     def record_stdin(stdin)
-      @logger.info "Standard input: #{format_input_output(stdin)}"
+      log_stream_increment(:stdin, stdin)
+    end
+
+    def record_stdout(stdout)
+      log_stream_increment(:stdout, stdout)
+    end
+
+    def record_stderr(stderr)
+      log_stream_increment(:stderr, stderr)
     end
 
     def record_status(status)
+      log_stream_remainder(:stdin)
+      log_stream_remainder(:stdout)
+      log_stream_remainder(:stderr)
+
       @logger.send status.success? ? :info : :error,
         "Status: #{status.exitstatus}"
     end
 
-    def record_stdout(stdout)
-      @logger.info "Standard output: #{format_input_output(stdout)}"
-    end
-
-    def record_stderr(stderr)
-      @logger.send stderr.empty? ? :info : :error,
-        "Error output: #{format_input_output(stderr)}"
-    end
-
     protected
-
-    def format_input_output(s)
-      s.empty? ? "(none)" : s
-    end
 
     def format_commands(commands)
       '"' + commands.map { |c| Shellwords.join(c) }.join(" | ") + '"'
+    end
+
+    def log_stream_increment(stream, data)
+      @stream_buffer[stream] + data =~ /\A((?:.*\n)*)(.*)\z/
+      lines, rest = $1, $2
+
+      lines.each_line { |l| log_stream_line(stream, l) }
+
+      @stream_used[stream] = true
+      @stream_buffer[stream] = rest
+    end
+
+    def log_stream_remainder(stream)
+      if @stream_used[stream] && !@stream_buffer[stream].empty?
+        log_stream_line(stream, @stream_buffer[stream])
+      end
+    end
+
+    def log_stream_line(stream, line)
+      @logger.send(
+        STREAM_INFO[stream][:method],
+        "#{STREAM_INFO[stream][:name]}: #{line.chomp}"
+      )
     end
   end
 
@@ -322,18 +355,15 @@ module Cheetah
       recorder = build_recorder(options)
 
       recorder.record_commands(commands)
-      recorder.record_stdin(streams[:stdin].string) unless streamed[:stdin]
 
       pid, pipes = fork_commands(commands)
-      select_loop(streams, pipes)
+      select_loop(streams, pipes, recorder)
       pid, status = Process.wait2(pid)
 
       begin
         check_errors(commands, status, streams, streamed)
       ensure
         recorder.record_status(status)
-        recorder.record_stdout(streams[:stdout].string) unless streamed[:stdout]
-        recorder.record_stderr(streams[:stderr].string) unless streamed[:stderr]
       end
 
       build_result(streams, options)
@@ -449,7 +479,7 @@ module Cheetah
       [pid, pipes]
     end
 
-    def select_loop(streams, pipes)
+    def select_loop(streams, pipes, recorder)
       # We write the command's input and read its output using a select loop.
       # Why? Because otherwise we could end up with a deadlock.
       #
@@ -464,6 +494,10 @@ module Cheetah
       outputs = {
         pipes[:stdout][READ] => streams[:stdout],
         pipes[:stderr][READ] => streams[:stderr]
+      }
+      recorder_methods = {
+        pipes[:stdout][READ] => :record_stdout,
+        pipes[:stderr][READ] => :record_stderr
       }
       pipes_readable = [pipes[:stdout][READ], pipes[:stderr][READ]]
       pipes_writable = [pipes[:stdin][WRITE]]
@@ -482,10 +516,14 @@ module Cheetah
 
         ios_read.each do |pipe|
           begin
-            outputs[pipe] << pipe.readpartial(4096)
+            data = pipe.readpartial(4096)
           rescue EOFError
             pipe.close
+            next
           end
+
+          outputs[pipe] << data
+          recorder.send(recorder_methods[pipe], data)
         end
 
         ios_write.each do |pipe|
@@ -496,6 +534,7 @@ module Cheetah
           end
 
           n = pipe.syswrite(stdin_buffer)
+          recorder.record_stdin(stdin_buffer[0...n])
           stdin_buffer = stdin_buffer[n..-1]
         end
       end

@@ -30,64 +30,141 @@ module Cheetah
     end
 
     describe "record_stdin" do
-      it "records empty input" do
-        @logger.should_receive(:info).with("Standard input: (none)")
-
-        @recorder.record_stdin("")
+      it "does not record anything for unterminated one-line input" do
+        @recorder.record_stdin("one")
       end
 
-      it "records non-empty input" do
-        @logger.should_receive(:info).with("Standard input: input")
+      it "records all terminated lines for unterminated multi-line input" do
+        @logger.should_receive(:info).with("Standard input: one")
+        @logger.should_receive(:info).with("Standard input: two")
 
-        @recorder.record_stdin("input")
+        @recorder.record_stdin("one\ntwo\nthree")
+      end
+
+      it "remembers unrecorded part of unterminated one-line input and combines it with new input" do
+        @logger.should_receive(:info).with("Standard input: one")
+        @logger.should_receive(:info).with("Standard input: two")
+        @logger.should_receive(:info).with("Standard input: three")
+
+        @recorder.record_stdin("one")
+        @recorder.record_stdin("\ntwo\nthree\n")
+      end
+
+      it "remembers unrecorded part of unterminated multi-line input and combines it with new input" do
+        @logger.should_receive(:info).with("Standard input: one")
+        @logger.should_receive(:info).with("Standard input: two")
+        @logger.should_receive(:info).with("Standard input: three")
+
+        @recorder.record_stdin("one\ntwo\nthree")
+        @recorder.record_stdin("\n")
+      end
+    end
+
+    describe "record_stdout" do
+      it "does not record anything for unterminated one-line output" do
+        @recorder.record_stdout("one")
+      end
+
+      it "records all terminated lines for unterminated multi-line output" do
+        @logger.should_receive(:info).with("Standard output: one")
+        @logger.should_receive(:info).with("Standard output: two")
+
+        @recorder.record_stdout("one\ntwo\nthree")
+      end
+
+      it "remembers unrecorded part of unterminated one-line output and combines it with new output" do
+        @logger.should_receive(:info).with("Standard output: one")
+        @logger.should_receive(:info).with("Standard output: two")
+        @logger.should_receive(:info).with("Standard output: three")
+
+        @recorder.record_stdout("one")
+        @recorder.record_stdout("\ntwo\nthree\n")
+      end
+
+      it "remembers unrecorded part of unterminated multi-line output and combines it with new output" do
+        @logger.should_receive(:info).with("Standard output: one")
+        @logger.should_receive(:info).with("Standard output: two")
+        @logger.should_receive(:info).with("Standard output: three")
+
+        @recorder.record_stdout("one\ntwo\nthree")
+        @recorder.record_stdout("\n")
+      end
+    end
+
+    describe "record_stderr" do
+      it "does not record anything for unterminated one-line output" do
+        @recorder.record_stderr("one")
+      end
+
+      it "records all terminated lines for unterminated multi-line output" do
+        @logger.should_receive(:error).with("Error output: one")
+        @logger.should_receive(:error).with("Error output: two")
+
+        @recorder.record_stderr("one\ntwo\nthree")
+      end
+
+      it "remembers unrecorded part of unterminated one-line output and combines it with new output" do
+        @logger.should_receive(:error).with("Error output: one")
+        @logger.should_receive(:error).with("Error output: two")
+        @logger.should_receive(:error).with("Error output: three")
+
+        @recorder.record_stderr("one")
+        @recorder.record_stderr("\ntwo\nthree\n")
+      end
+
+      it "remembers unrecorded part of unterminated multi-line output and combines it with new output" do
+        @logger.should_receive(:error).with("Error output: one")
+        @logger.should_receive(:error).with("Error output: two")
+        @logger.should_receive(:error).with("Error output: three")
+
+        @recorder.record_stderr("one\ntwo\nthree")
+        @recorder.record_stderr("\n")
       end
     end
 
     describe "record_status" do
-      it "records a success" do
-        @logger.should_receive(:info).with("Status: 0")
-
+      before :each do
         # I hate to mock Process::Status but it seems one can't create a new
         # instance of it without actually running some process, which would be
         # even worse.
-        @recorder.record_status(double(:success? => true, :exitstatus => 0))
+        @status_success = double(:success? => true,  :exitstatus => 0)
+        @status_failure = double(:success? => false, :exitstatus => 1)
+      end
+
+      it "records a success" do
+        @logger.should_receive(:info).with("Status: 0")
+
+        @recorder.record_status(@status_success)
       end
 
       it "records a failure" do
         @logger.should_receive(:error).with("Status: 1")
 
-        # I hate to mock Process::Status but it seems one can't create a new
-        # instance of it without actually running some process, which would be
-        # even worse.
-        @recorder.record_status(double(:success? => false, :exitstatus => 1))
-      end
-    end
-
-    describe "record_stdout" do
-      it "records empty output" do
-        @logger.should_receive(:info).with("Standard output: (none)")
-
-        @recorder.record_stdout("")
+        @recorder.record_status(@status_failure)
       end
 
-      it "records non-empty output" do
+      it "records unrecorded part of the standard input" do
+        @logger.should_receive(:info).with("Standard input: input")
+        @logger.should_receive(:info).with("Status: 0")
+
+        @recorder.record_stdin("input")
+        @recorder.record_status(@status_success)
+      end
+
+      it "records unrecorded part of the standard output" do
         @logger.should_receive(:info).with("Standard output: output")
+        @logger.should_receive(:info).with("Status: 0")
 
         @recorder.record_stdout("output")
-      end
-    end
-
-    describe "record_stderr" do
-      it "records empty output" do
-        @logger.should_receive(:info).with("Error output: (none)")
-
-        @recorder.record_stderr("")
+        @recorder.record_status(@status_success)
       end
 
-      it "records non-empty output" do
-        @logger.should_receive(:error).with("Error output: output")
+      it "records unrecorded part of the error output" do
+        @logger.should_receive(:error).with("Error output: error")
+        @logger.should_receive(:info).with("Status: 0")
 
-        @recorder.record_stderr("output")
+        @recorder.record_stderr("error")
+        @recorder.record_status(@status_success)
       end
     end
   end
@@ -364,10 +441,7 @@ describe Cheetah do
       it "uses the default recorder with no :recorder option" do
         logger = double
         logger.should_receive(:info).with("Executing \"/bin/true\".")
-        logger.should_receive(:info).with("Standard input: (none)")
         logger.should_receive(:info).with("Status: 0")
-        logger.should_receive(:info).with("Standard output: (none)")
-        logger.should_receive(:info).with("Error output: (none)")
 
         Cheetah.run("/bin/true", :logger => logger)
       end
@@ -375,51 +449,65 @@ describe Cheetah do
       it "uses the passed recorder with a :recorder option" do
         recorder = double
         recorder.should_receive(:record_commands).with([["/bin/true"]])
-        recorder.should_receive(:record_stdin).with("")
         recorder.should_receive(:record_status)
-        recorder.should_receive(:record_stdout).with("")
-        recorder.should_receive(:record_stderr).with("")
 
         Cheetah.run("/bin/true", :recorder => recorder)
       end
 
-      it "does not log standard input with :stdin set to an IO" do
+      it "records standard input" do
+        command = create_command(<<-EOT)
+          read line || true
+        EOT
+
         recorder = double
-        recorder.should_receive(:record_commands).with([["/bin/true"]])
+        recorder.should_receive(:record_commands).with([[command]])
         recorder.should_not_receive(:record_stdin)
         recorder.should_receive(:record_status)
-        recorder.should_receive(:record_stdout).with("")
-        recorder.should_receive(:record_stderr).with("")
 
-        StringIO.open("input") do |stdin|
-          Cheetah.run("/bin/true", :recorder => recorder, :stdin => stdin)
-        end
+        Cheetah.run(command, :recorder => recorder, :stdin => "")
+
+        recorder = double
+        recorder.should_receive(:record_commands).with([[command]])
+        recorder.should_receive(:record_stdin).with("input")
+        recorder.should_receive(:record_status)
+
+        Cheetah.run(command, :recorder => recorder, :stdin => "input")
       end
 
-      it "does not log standard output with :stout set to an IO" do
+      it "records standard output" do
         recorder = double
         recorder.should_receive(:record_commands).with([["/bin/true"]])
-        recorder.should_receive(:record_stdin).with("")
-        recorder.should_receive(:record_status)
         recorder.should_not_receive(:record_stdout)
-        recorder.should_receive(:record_stderr).with("")
+        recorder.should_receive(:record_status)
 
-        StringIO.open("output", "w") do |stdout|
-          Cheetah.run("/bin/true", :recorder => recorder, :stdout => stdout)
-        end
+        Cheetah.run("/bin/true", :recorder => recorder)
+
+        recorder = double
+        recorder.should_receive(:record_commands).with([["echo", "-n", "output"]])
+        recorder.should_receive(:record_stdout).with("output")
+        recorder.should_receive(:record_status)
+
+        Cheetah.run("echo", "-n", "output", :recorder => recorder)
       end
 
-      it "does not log error output with :stderr set to an IO" do
+      it "records error output" do
         recorder = double
         recorder.should_receive(:record_commands).with([["/bin/true"]])
-        recorder.should_receive(:record_stdin).with("")
-        recorder.should_receive(:record_status)
-        recorder.should_receive(:record_stdout).with("")
         recorder.should_not_receive(:record_stderr)
+        recorder.should_receive(:record_status)
 
-        StringIO.open("output", "w") do |stderr|
-          Cheetah.run("/bin/true", :recorder => recorder, :stderr => stderr)
-        end
+        Cheetah.run("/bin/true", :recorder => recorder)
+
+        command = create_command(<<-EOT)
+          echo -n 'error' 1>&2
+        EOT
+
+        recorder = double
+        recorder.should_receive(:record_commands).with([[command]])
+        recorder.should_receive(:record_stderr).with("error")
+        recorder.should_receive(:record_status)
+
+        Cheetah.run(command, :recorder => recorder)
       end
     end
 
