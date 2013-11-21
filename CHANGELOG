@@ -1,3 +1,13 @@
+0.4.0 (2013-11-21)
+------------------
+
+* Implemented incremental logging. The input and both outputs of the executed
+  command are now logged one-by-line by the default recorder. A custom recorder
+  can record them on even finer granularity.
+* Dropped support of Ruby 1.8.7.
+* Added support of Ruby 2.0.0.
+* Internal code improvements.
+
 0.3.0 (2012-06-21)
 ------------------
 
