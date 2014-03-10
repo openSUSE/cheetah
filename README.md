@@ -149,7 +149,7 @@ To avoid repetition, you can set global default value of any option passed too
 
 ```ruby
 # If you're tired of passing the :logger option all the time...
-Cheetah.default_options = { :logger = my_logger }
+Cheetah.default_options = { :logger => my_logger }
 Cheetah.run("./configure")
 Cheetah.run("make")
 Cheetah.run("make", "install")
