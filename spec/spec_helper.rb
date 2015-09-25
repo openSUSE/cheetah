@@ -1,7 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + "/../lib/cheetah")
 
 RSpec.configure do |c|
-  c.color_enabled = true
+  c.color = true
 end
 
 RSpec::Matchers.define :touch do |*files|
