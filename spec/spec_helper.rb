@@ -1,13 +1,17 @@
 require File.expand_path(File.dirname(__FILE__) + "/../lib/cheetah")
 
 RSpec.configure do |c|
-  c.color_enabled = true
+  c.color = true
 end
 
 RSpec::Matchers.define :touch do |*files|
   match do |proc|
     proc.call
     files.all? { |f| File.exists?(f) }
+  end
+
+  def supports_block_expectations?
+    true
   end
 end
 
@@ -18,6 +22,10 @@ RSpec::Matchers.define :write do |output|
 
   match do |proc|
     proc.call
-    File.read(@file).should == output
+    expect(File.read(@file)).to eq output
+  end
+
+  def supports_block_expectations?
+    true
   end
 end
