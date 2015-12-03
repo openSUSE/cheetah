@@ -22,7 +22,7 @@ begin
 rescue Cheetah::ExecutionFailed => e
   puts e.message
   puts "Standard output: #{e.stdout}"
-  puts "Error ouptut:    #{e.stderr}"
+  puts "Error output:    #{e.stderr}"
 end
 ```
 
@@ -130,7 +130,7 @@ begin
 rescue Cheetah::ExecutionFailed => e
   puts e.message
   puts "Standard output: #{e.stdout}"
-  puts "Error ouptut:    #{e.stderr}"
+  puts "Error output:    #{e.stderr}"
 end
 ```
 ### Logging
