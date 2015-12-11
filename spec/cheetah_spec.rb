@@ -719,6 +719,44 @@ describe Cheetah do
           }
         end
       end
+
+      describe "allowing exitstatus" do
+        it "does not raise exception for allowed exitstatus" do
+          expect(Cheetah.run("/bin/false", allowed_exitstatus: 1)).to eq 1
+        end
+
+        it "allows passing fixnums" do
+          expect(Cheetah.run("/bin/false", allowed_exitstatus: 1)).to eq 1
+        end
+
+        it "allows passing Array" do
+          expect(Cheetah.run("/bin/false", allowed_exitstatus: [1, 2])).to eq 1
+        end
+
+        it "allows passing Range" do
+          expect(Cheetah.run("/bin/false", allowed_exitstatus: 1..2)).to eq 1
+        end
+
+        it "allows passing nil" do
+          expect { Cheetah.run("/bin/false", allowed_exitstatus: nil) }.to(
+            raise_error(Cheetah::ExecutionFailed)
+          )
+        end
+
+        it "raise exceptions for exitstatus not allowed" do
+          expect { Cheetah.run("/bin/false", allowed_exitstatus: 2..5) }.to(
+            raise_error(Cheetah::ExecutionFailed)
+          )
+        end
+
+        it "returns exitstatus if no other capturing requested" do
+          expect(Cheetah.run("/bin/false", allowed_exitstatus: 1)).to eq 1
+        end
+
+        it "appends exitstatus to end if other capturing is requested" do
+          expect(Cheetah.run("/bin/false", stdout: :capture, allowed_exitstatus: 1)).to eq(["", 1])
+        end
+      end
     end
   end
 end

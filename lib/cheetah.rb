@@ -301,6 +301,9 @@ module Cheetah
     #     execution
     #   @option options [Recorder, nil] :recorder (DefaultRecorder.new) recorder
     #     to handle the command execution logging
+    #   @option options [Fixnum, .include?, nil] :allowed_exitstatus (nil)
+    #     Allows to specify allowed exit codes that do not cause exception. It
+    #     adds as last element of result exitstatus.
     #
     #   @example
     #     Cheetah.run("tar", "xzf", "foo.tar.gz")
@@ -350,11 +353,34 @@ module Cheetah
     #     puts "Standard output: #{e.stdout}"
     #     puts "Error ouptut:    #{e.stderr}"
     #   end
+    #
+    # @example Run a command with expected false and handle errors
+    #   begin
+    #     # exit code 1 for grep mean not found
+    #     result = Cheetah.run("grep", "userA", "/etc/passwd", allowed_exitstatus: 1)
+    #     if result == 0
+    #       puts "found"
+    #     else
+    #       puts "not found"
+    #     end
+    #   rescue Cheetah::ExecutionFailed => e
+    #     puts e.message
+    #     puts "Standard output: #{e.stdout}"
+    #     puts "Error ouptut:    #{e.stderr}"
+    #   end
+    #
+    # @example more complex example with allowed_exitstatus
+    #   stdout, exitcode = Cheetah.run("cmd", stdout: :capture, allowed_exitstatus: 1..5)
+    #
+
     def run(*args)
       options = args.last.is_a?(Hash) ? args.pop : {}
       options = BUILTIN_DEFAULT_OPTIONS.merge(@default_options).merge(options)
 
       options[:stdin] ||= "" # allow passing nil stdin see issue gh#11
+      if !options[:allowed_exitstatus].respond_to?(:include?)
+        options[:allowed_exitstatus] = Array(options[:allowed_exitstatus])
+      end
 
       streamed = compute_streamed(options)
       streams  = build_streams(options, streamed)
@@ -368,12 +394,12 @@ module Cheetah
       _pid, status = Process.wait2(pid)
 
       begin
-        check_errors(commands, status, streams, streamed)
+        check_errors(commands, status, streams, streamed, options)
       ensure
         recorder.record_status(status)
       end
 
-      build_result(streams, options)
+      build_result(streams, status, options)
     end
 
     private
@@ -548,8 +574,9 @@ module Cheetah
       end
     end
 
-    def check_errors(commands, status, streams, streamed)
+    def check_errors(commands, status, streams, streamed, options)
       return if status.success?
+      return if options[:allowed_exitstatus].include?(status.exitstatus)
 
       stderr_part = if streamed[:stderr]
                       " (error output streamed away)"
@@ -570,17 +597,29 @@ module Cheetah
       )
     end
 
-    def build_result(streams, options)
-      case [options[:stdout] == :capture, options[:stderr] == :capture]
-      when [false, false]
-        nil
-      when [true, false]
-        streams[:stdout].string
-      when [false, true]
-        streams[:stderr].string
-      when [true, true]
-        [streams[:stdout].string, streams[:stderr].string]
+    def build_result(streams, status, options)
+      res = case [options[:stdout] == :capture, options[:stderr] == :capture]
+            when [false, false]
+              nil
+            when [true, false]
+              streams[:stdout].string
+            when [false, true]
+              streams[:stderr].string
+            when [true, true]
+              [streams[:stdout].string, streams[:stderr].string]
+            end
+
+      # do not capture only for empty array or nil converted to empty array
+      if !options[:allowed_exitstatus].is_a?(Array) || !options[:allowed_exitstatus].empty?
+        if res.nil?
+          res = status.exitstatus
+        else
+          res = Array(res)
+          res << status.exitstatus
+        end
       end
+
+      res
     end
 
     def format_commands(commands)
