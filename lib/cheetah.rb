@@ -125,11 +125,15 @@ module Cheetah
   # A recorder that does not record anyting. Used by {Cheetah.run} when no
   # logger is passed.
   class NullRecorder < Recorder
-    def record_commands(commands); end
-    def record_stdin(stdin);       end
-    def record_stdout(stdout);     end
-    def record_stderr(stderr);     end
-    def record_status(status);     end
+    def record_commands(_commands); end
+
+    def record_stdin(_stdin);       end
+
+    def record_stdout(_stdout);     end
+
+    def record_stderr(_stderr);     end
+
+    def record_status(_status);     end
   end
 
   # A default recorder. It uses the `Logger::INFO` level for normal messages and
@@ -138,16 +142,16 @@ module Cheetah
   class DefaultRecorder < Recorder
     # @private
     STREAM_INFO = {
-      :stdin  => { :name => "Standard input",  :method => :info  },
-      :stdout => { :name => "Standard output", :method => :info  },
-      :stderr => { :name => "Error output",    :method => :error }
+      stdin: { name: "Standard input", method: :info },
+      stdout: { name: "Standard output", method: :info  },
+      stderr: { name: "Error output",    method: :error }
     }
 
     def initialize(logger)
       @logger = logger
 
-      @stream_used   = { :stdin => false, :stdout => false, :stderr => false }
-      @stream_buffer = { :stdin => "",    :stdout => "",    :stderr => "" }
+      @stream_used   = { stdin: false, stdout: false, stderr: false }
+      @stream_buffer = { stdin: "",    stdout: "",    stderr: "" }
     end
 
     def record_commands(commands)
@@ -172,7 +176,7 @@ module Cheetah
       log_stream_remainder(:stderr)
 
       @logger.send status.success? ? :info : :error,
-        "Status: #{status.exitstatus}"
+                   "Status: #{status.exitstatus}"
     end
 
     protected
@@ -183,7 +187,8 @@ module Cheetah
 
     def log_stream_increment(stream, data)
       @stream_buffer[stream] + data =~ /\A((?:.*\n)*)(.*)\z/
-      lines, rest = $1, $2
+      lines = Regexp.last_match(1)
+      rest = Regexp.last_match(2)
 
       lines.each_line { |l| log_stream_line(stream, l) }
 
@@ -192,9 +197,9 @@ module Cheetah
     end
 
     def log_stream_remainder(stream)
-      if @stream_used[stream] && !@stream_buffer[stream].empty?
-        log_stream_line(stream, @stream_buffer[stream])
-      end
+      return if !@stream_used[stream] || @stream_buffer[stream].empty?
+
+      log_stream_line(stream, @stream_buffer[stream])
     end
 
     def log_stream_line(stream, line)
@@ -207,10 +212,10 @@ module Cheetah
 
   # @private
   BUILTIN_DEFAULT_OPTIONS = {
-    :stdin              => "",
-    :stdout             => nil,
-    :stderr             => nil,
-    :logger             => nil
+    stdin: "",
+    stdout: nil,
+    stderr: nil,
+    logger: nil
   }
 
   READ  = 0 # @private
@@ -244,7 +249,7 @@ module Cheetah
     # multiple command case, the execution succeeds if the last command can be
     # executed and returns a zero exit status.)
     #
-    # Commands and their arguments never undergo shell expansion — they are
+    # Commands and their arguments never undergo shell expansion - they are
     # passed directly to the operating system. While this may create some
     # inconvenience in certain cases, it eliminates a whole class of security
     # bugs.
@@ -358,7 +363,7 @@ module Cheetah
 
       pid, pipes = fork_commands(commands)
       select_loop(streams, pipes, recorder)
-      pid, status = Process.wait2(pid)
+      _pid, status = Process.wait2(pid)
 
       begin
         check_errors(commands, status, streams, streamed)
@@ -378,17 +383,17 @@ module Cheetah
       # and nil is an IO-like object. We avoid detecting it directly to allow
       # passing StringIO, mocks, etc.
       {
-        :stdin  => !options[:stdin].is_a?(String),
-        :stdout => ![nil, :capture].include?(options[:stdout]),
-        :stderr => ![nil, :capture].include?(options[:stderr])
+        stdin: !options[:stdin].is_a?(String),
+        stdout: ![nil, :capture].include?(options[:stdout]),
+        stderr: ![nil, :capture].include?(options[:stderr])
       }
     end
 
     def build_streams(options, streamed)
       {
-        :stdin  => streamed[:stdin]  ? options[:stdin]  : StringIO.new(options[:stdin]),
-        :stdout => streamed[:stdout] ? options[:stdout] : StringIO.new(""),
-        :stderr => streamed[:stderr] ? options[:stderr] : StringIO.new("")
+        stdin: streamed[:stdin] ? options[:stdin] : StringIO.new(options[:stdin]),
+        stdout: streamed[:stdout] ? options[:stdout] : StringIO.new(""),
+        stderr: streamed[:stderr] ? options[:stderr] : StringIO.new("")
       }
     end
 
@@ -431,11 +436,11 @@ module Cheetah
           else
             pipe_to_child = IO.pipe
 
-            fork_commands_recursive(commands[0..-2], {
-              :stdin  => pipes[:stdin],
-              :stdout => pipe_to_child,
-              :stderr => pipes[:stderr]
-            })
+            fork_commands_recursive(commands[0..-2],
+                                    stdin: pipes[:stdin],
+                                    stdout: pipe_to_child,
+                                    stderr: pipes[:stderr]
+                                   )
 
             pipes[:stdin][READ].close
             pipes[:stdin][WRITE].close
@@ -459,14 +464,14 @@ module Cheetah
 
           command, *args = commands.last
           exec([command, command], *args)
-        rescue SystemCallError => e
+        rescue SystemCallError
           exit!(127)
         end
       end
     end
 
     def fork_commands(commands)
-      pipes = { :stdin => IO.pipe, :stdout => IO.pipe, :stderr => IO.pipe }
+      pipes = { stdin: IO.pipe, stdout: IO.pipe, stderr: IO.pipe }
 
       pid = fork_commands_recursive(commands, pipes)
 
@@ -508,7 +513,7 @@ module Cheetah
         break if pipes_readable.empty? && pipes_writable.empty?
 
         ios_read, ios_write, ios_error = select(pipes_readable, pipes_writable,
-          pipes_readable + pipes_writable)
+                                                pipes_readable + pipes_writable)
 
         if !ios_error.empty?
           raise IOError, "Error when communicating with executed program."
@@ -544,34 +549,34 @@ module Cheetah
       return if status.success?
 
       stderr_part = if streamed[:stderr]
-        " (error output streamed away)"
-      elsif streams[:stderr].string.empty?
-        " (no error output)"
-      else
-        lines = streams[:stderr].string.split("\n")
-        ": " + lines.first + (lines.size > 1 ? " (...)" : "")
-      end
+                      " (error output streamed away)"
+                    elsif streams[:stderr].string.empty?
+                      " (no error output)"
+                    else
+                      lines = streams[:stderr].string.split("\n")
+                      ": " + lines.first + (lines.size > 1 ? " (...)" : "")
+                    end
 
       raise ExecutionFailed.new(
         commands,
         status,
         streamed[:stdout] ? nil : streams[:stdout].string,
         streamed[:stderr] ? nil : streams[:stderr].string,
-        "Execution of #{format_commands(commands)} " +
+        "Execution of #{format_commands(commands)} " \
           "failed with status #{status.exitstatus}#{stderr_part}."
       )
     end
 
     def build_result(streams, options)
       case [options[:stdout] == :capture, options[:stderr] == :capture]
-        when [false, false]
-          nil
-        when [true, false]
-          streams[:stdout].string
-        when [false, true]
-          streams[:stderr].string
-        when [true, true]
-          [streams[:stdout].string, streams[:stderr].string]
+      when [false, false]
+        nil
+      when [true, false]
+        streams[:stdout].string
+      when [false, true]
+        streams[:stderr].string
+      when [true, true]
+        [streams[:stdout].string, streams[:stderr].string]
       end
     end
 
@@ -582,4 +587,3 @@ module Cheetah
 
   self.default_options = {}
 end
-
