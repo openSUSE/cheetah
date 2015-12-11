@@ -169,7 +169,7 @@ For more information, see the
 Compatibility
 -------------
 
-Cheetah should run well on any Unix system with Ruby 1.9.3, 2.0.0, 2.1 and 2.2. Non-Unix
+Cheetah should run well on any Unix system with Ruby 2.0.0, 2.1 and 2.2. Non-Unix
 systems and different Ruby implementations/versions may work too but they were
 not tested.
 
