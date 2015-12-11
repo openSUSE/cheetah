@@ -9,6 +9,10 @@ RSpec::Matchers.define :touch do |*files|
     proc.call
     files.all? { |f| File.exists?(f) }
   end
+
+  def supports_block_expectations?
+    true
+  end
 end
 
 RSpec::Matchers.define :write do |output|
@@ -18,6 +22,10 @@ RSpec::Matchers.define :write do |output|
 
   match do |proc|
     proc.call
-    File.read(@file).should == output
+    expect(File.read(@file)).to eq output
+  end
+
+  def supports_block_expectations?
+    true
   end
 end

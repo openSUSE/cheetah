@@ -10,7 +10,7 @@ module Cheetah
 
     describe "record_commands" do
       it "logs execution of commands" do
-        @logger.should_receive(:info).with(
+        expect(@logger).to receive(:info).with(
           "Executing \"one foo bar baz | two foo bar baz | three foo bar baz\"."
         )
 
@@ -22,7 +22,7 @@ module Cheetah
       end
 
       it "escapes commands and their arguments" do
-        @logger.should_receive(:info).with(
+        expect(@logger).to receive(:info).with(
           "Executing \"we\\ \\!\\ ir\\ \\$d we\\ \\!\\ ir\\ \\$d we\\ \\!\\ ir\\ \\$d \\<\\|\\>\\$\"."
         )
 
@@ -36,25 +36,25 @@ module Cheetah
       end
 
       it "logs all terminated lines for unterminated multi-line input" do
-        @logger.should_receive(:info).with("Standard input: one")
-        @logger.should_receive(:info).with("Standard input: two")
+        expect(@logger).to receive(:info).with("Standard input: one")
+        expect(@logger).to receive(:info).with("Standard input: two")
 
         @recorder.record_stdin("one\ntwo\nthree")
       end
 
       it "remembers unlogged part of unterminated one-line input and combines it with new input" do
-        @logger.should_receive(:info).with("Standard input: one")
-        @logger.should_receive(:info).with("Standard input: two")
-        @logger.should_receive(:info).with("Standard input: three")
+        expect(@logger).to receive(:info).with("Standard input: one")
+        expect(@logger).to receive(:info).with("Standard input: two")
+        expect(@logger).to receive(:info).with("Standard input: three")
 
         @recorder.record_stdin("one")
         @recorder.record_stdin("\ntwo\nthree\n")
       end
 
       it "remembers unlogged part of unterminated multi-line input and combines it with new input" do
-        @logger.should_receive(:info).with("Standard input: one")
-        @logger.should_receive(:info).with("Standard input: two")
-        @logger.should_receive(:info).with("Standard input: three")
+        expect(@logger).to receive(:info).with("Standard input: one")
+        expect(@logger).to receive(:info).with("Standard input: two")
+        expect(@logger).to receive(:info).with("Standard input: three")
 
         @recorder.record_stdin("one\ntwo\nthree")
         @recorder.record_stdin("\n")
@@ -67,25 +67,25 @@ module Cheetah
       end
 
       it "logs all terminated lines for unterminated multi-line output" do
-        @logger.should_receive(:info).with("Standard output: one")
-        @logger.should_receive(:info).with("Standard output: two")
+        expect(@logger).to receive(:info).with("Standard output: one")
+        expect(@logger).to receive(:info).with("Standard output: two")
 
         @recorder.record_stdout("one\ntwo\nthree")
       end
 
       it "remembers unlogged part of unterminated one-line output and combines it with new output" do
-        @logger.should_receive(:info).with("Standard output: one")
-        @logger.should_receive(:info).with("Standard output: two")
-        @logger.should_receive(:info).with("Standard output: three")
+        expect(@logger).to receive(:info).with("Standard output: one")
+        expect(@logger).to receive(:info).with("Standard output: two")
+        expect(@logger).to receive(:info).with("Standard output: three")
 
         @recorder.record_stdout("one")
         @recorder.record_stdout("\ntwo\nthree\n")
       end
 
       it "remembers unlogged part of unterminated multi-line output and combines it with new output" do
-        @logger.should_receive(:info).with("Standard output: one")
-        @logger.should_receive(:info).with("Standard output: two")
-        @logger.should_receive(:info).with("Standard output: three")
+        expect(@logger).to receive(:info).with("Standard output: one")
+        expect(@logger).to receive(:info).with("Standard output: two")
+        expect(@logger).to receive(:info).with("Standard output: three")
 
         @recorder.record_stdout("one\ntwo\nthree")
         @recorder.record_stdout("\n")
@@ -98,25 +98,25 @@ module Cheetah
       end
 
       it "logs all terminated lines for unterminated multi-line output" do
-        @logger.should_receive(:error).with("Error output: one")
-        @logger.should_receive(:error).with("Error output: two")
+        expect(@logger).to receive(:error).with("Error output: one")
+        expect(@logger).to receive(:error).with("Error output: two")
 
         @recorder.record_stderr("one\ntwo\nthree")
       end
 
       it "remembers unlogged part of unterminated one-line output and combines it with new output" do
-        @logger.should_receive(:error).with("Error output: one")
-        @logger.should_receive(:error).with("Error output: two")
-        @logger.should_receive(:error).with("Error output: three")
+        expect(@logger).to receive(:error).with("Error output: one")
+        expect(@logger).to receive(:error).with("Error output: two")
+        expect(@logger).to receive(:error).with("Error output: three")
 
         @recorder.record_stderr("one")
         @recorder.record_stderr("\ntwo\nthree\n")
       end
 
       it "remembers unlogged part of unterminated multi-line output and combines it with new output" do
-        @logger.should_receive(:error).with("Error output: one")
-        @logger.should_receive(:error).with("Error output: two")
-        @logger.should_receive(:error).with("Error output: three")
+        expect(@logger).to receive(:error).with("Error output: one")
+        expect(@logger).to receive(:error).with("Error output: two")
+        expect(@logger).to receive(:error).with("Error output: three")
 
         @recorder.record_stderr("one\ntwo\nthree")
         @recorder.record_stderr("\n")
@@ -133,36 +133,36 @@ module Cheetah
       end
 
       it "logs a success" do
-        @logger.should_receive(:info).with("Status: 0")
+        expect(@logger).to receive(:info).with("Status: 0")
 
         @recorder.record_status(@status_success)
       end
 
       it "logs a failure" do
-        @logger.should_receive(:error).with("Status: 1")
+        expect(@logger).to receive(:error).with("Status: 1")
 
         @recorder.record_status(@status_failure)
       end
 
       it "logs unlogged part of the standard input" do
-        @logger.should_receive(:info).with("Standard input: input")
-        @logger.should_receive(:info).with("Status: 0")
+        expect(@logger).to receive(:info).with("Standard input: input")
+        expect(@logger).to receive(:info).with("Status: 0")
 
         @recorder.record_stdin("input")
         @recorder.record_status(@status_success)
       end
 
       it "logs unlogged part of the standard output" do
-        @logger.should_receive(:info).with("Standard output: output")
-        @logger.should_receive(:info).with("Status: 0")
+        expect(@logger).to receive(:info).with("Standard output: output")
+        expect(@logger).to receive(:info).with("Status: 0")
 
         @recorder.record_stdout("output")
         @recorder.record_status(@status_success)
       end
 
       it "logs unlogged part of the error output" do
-        @logger.should_receive(:error).with("Error output: error")
-        @logger.should_receive(:info).with("Status: 0")
+        expect(@logger).to receive(:error).with("Error output: error")
+        expect(@logger).to receive(:info).with("Status: 0")
 
         @recorder.record_stderr("error")
         @recorder.record_status(@status_success)
@@ -206,43 +206,43 @@ describe Cheetah do
     describe "running commands" do
       it "runs a command without arguments" do
         command = create_command("touch #@tmp_dir/touched")
-        lambda { Cheetah.run(command) }.should touch("#@tmp_dir/touched")
+        expect { Cheetah.run(command) }.to touch("#@tmp_dir/touched")
       end
 
       it "runs a command with arguments" do
         command = create_command("echo -n \"$@\" >> #@tmp_dir/args")
-        lambda {
+        expect {
           Cheetah.run(command, "foo", "bar", "baz")
-        }.should write("foo bar baz").into("#@tmp_dir/args")
+        }.to write("foo bar baz").into("#@tmp_dir/args")
       end
 
       it "runs a command without arguments using one array param" do
         command = create_command("touch #@tmp_dir/touched")
-        lambda { Cheetah.run([command]) }.should touch("#@tmp_dir/touched")
+        expect { Cheetah.run([command]) }.to touch("#@tmp_dir/touched")
       end
 
       it "runs a command with arguments using one array param" do
         command = create_command("echo -n \"$@\" >> #@tmp_dir/args")
-        lambda {
+        expect {
           Cheetah.run([command, "foo", "bar", "baz"])
-        }.should write("foo bar baz").into("#@tmp_dir/args")
+        }.to write("foo bar baz").into("#@tmp_dir/args")
       end
 
       it "does not mind weird characters in the command" do
         command = create_command("touch #@tmp_dir/touched", :name => "we ! ir $d")
-        lambda { Cheetah.run([command]) }.should touch("#@tmp_dir/touched")
+        expect { Cheetah.run([command]) }.to touch("#@tmp_dir/touched")
       end
 
       it "does not mind weird characters in the arguments" do
         command = create_command("echo -n \"$@\" >> #@tmp_dir/args")
-        lambda {
+        expect {
           Cheetah.run(command, "we ! ir $d", "we ! ir $d", "we ! ir $d")
-        }.should write("we ! ir $d we ! ir $d we ! ir $d").into("#@tmp_dir/args")
+        }.to write("we ! ir $d we ! ir $d we ! ir $d").into("#@tmp_dir/args")
       end
 
       it "does not pass the command to the shell" do
         command = create_command("touch #@tmp_dir/touched", :name => "foo < bar > baz | qux")
-        lambda { Cheetah.run(command) }.should touch("#@tmp_dir/touched")
+        expect { Cheetah.run(command) }.to touch("#@tmp_dir/touched")
       end
     end
 
@@ -252,9 +252,9 @@ describe Cheetah do
         command2 = create_command("touch #@tmp_dir/touched2", :name => "command2")
         command3 = create_command("touch #@tmp_dir/touched3", :name => "command3")
 
-        lambda {
+        expect {
           Cheetah.run([command1], [command2], [command3])
-        }.should touch(
+        }.to touch(
           "#@tmp_dir/touched1",
           "#@tmp_dir/touched2",
           "#@tmp_dir/touched3"
@@ -267,12 +267,12 @@ describe Cheetah do
           echo "$@"
         EOT
 
-        Cheetah.run(
+        expect(Cheetah.run(
           [command, "foo1", "bar1", "baz1"],
           [command, "foo2", "bar2", "baz2"],
           [command, "foo3", "bar3", "baz3"],
           :stdout => :capture
-        ).should == "foo1 bar1 baz1\nfoo2 bar2 baz2\nfoo3 bar3 baz3\n"
+        )).to eq "foo1 bar1 baz1\nfoo2 bar2 baz2\nfoo3 bar3 baz3\n"
       end
 
       it "passes standard output of one command to the next one" do
@@ -294,9 +294,9 @@ describe Cheetah do
           echo $message
         EOT
 
-        lambda {
+        expect {
           Cheetah.run([command1], [command2], [command3])
-        }.should write([
+        }.to write([
           "message\n",
           "message\n",
           "message\n",
@@ -306,8 +306,7 @@ describe Cheetah do
       it "combines error output of all commands" do
         command = create_command("echo 'error' 1>&2")
 
-        Cheetah.run([command], [command], [command], :stderr => :capture).should ==
-          "error\nerror\nerror\n"
+        expect(Cheetah.run([command], [command], [command], :stderr => :capture)).to eq "error\nerror\nerror\n"
       end
     end
 
@@ -325,7 +324,7 @@ describe Cheetah do
 
         STDIN.reopen(reader)
         begin
-          Cheetah.run("cat", :stdout => :capture).should == ""
+          expect(Cheetah.run("cat", :stdout => :capture)).to eq ""
         ensure
           STDIN.reopen(saved_stdin)
           reader.close
@@ -333,16 +332,16 @@ describe Cheetah do
       end
 
       it "reads standard input from :stdin when set to a string" do
-        Cheetah.run("cat", :stdin => "",      :stdout => :capture).should == ""
-        Cheetah.run("cat", :stdin => "input", :stdout => :capture).should == "input"
+        expect(Cheetah.run("cat", :stdin => "",      :stdout => :capture)).to eq ""
+        expect(Cheetah.run("cat", :stdin => "input", :stdout => :capture)).to eq "input"
       end
 
       it "reads standard input from :stdin when set to an IO" do
         StringIO.open("") do |stdin|
-          Cheetah.run("cat", :stdin => stdin, :stdout => :capture).should == ""
+          expect(Cheetah.run("cat", :stdin => stdin, :stdout => :capture)).to eq ""
         end
         StringIO.open("input") do |stdin|
-          Cheetah.run("cat", :stdin => stdin, :stdout => :capture).should == "input"
+          expect(Cheetah.run("cat", :stdin => stdin, :stdout => :capture)).to eq "input"
         end
       end
     end
@@ -371,7 +370,7 @@ describe Cheetah do
           writer.close
         end
 
-        reader.read.should == ""
+        expect(reader.read).to eq ""
         reader.close
       end
 
@@ -391,49 +390,49 @@ describe Cheetah do
           writer.close
         end
 
-        reader.read.should == ""
+        expect(reader.read).to eq ""
         reader.close
       end
 
       it "returns nil with no :stdout and :stderr options" do
-        Cheetah.run(@command).should be_nil
+        expect(Cheetah.run(@command)).to be_nil
       end
 
       it "returns nil with :stdout => nil" do
-        Cheetah.run(@command, :stdout => nil).should be_nil
+        expect(Cheetah.run(@command, :stdout => nil)).to be_nil
       end
 
       it "returns nil with :stderr => nil" do
-        Cheetah.run(@command, :stderr => nil).should be_nil
+        expect(Cheetah.run(@command, :stderr => nil)).to be_nil
       end
 
       it "returns the standard output with :stdout => :capture" do
-        Cheetah.run("echo", "-n", "output", :stdout => :capture).should == "output"
+        expect(Cheetah.run("echo", "-n", "output", :stdout => :capture)).to eq "output"
       end
 
       it "returns the error output with :stderr => :capture" do
-        Cheetah.run(@command, :stderr => :capture).should == "error"
+        expect(Cheetah.run(@command, :stderr => :capture)).to eq "error"
       end
 
       it "returns both outputs with :stdout => :capture and :stderr => :capture" do
-        Cheetah.run(@command, :stdout => :capture, :stderr => :capture).should == ["output", "error"]
+        expect(Cheetah.run(@command, :stdout => :capture, :stderr => :capture)).to eq ["output", "error"]
       end
 
       it "handles commands that output nothing correctly with :stdout => :capture and :stderr => :capture" do
-        Cheetah.run("/bin/true", :stdout => :capture, :stderr => :capture).should == ["", ""]
+        expect(Cheetah.run("/bin/true", :stdout => :capture, :stderr => :capture)).to eq ["", ""]
       end
 
       it "writes standard output to :stdout when set to an IO" do
         StringIO.open("", "w") do |stdout|
           Cheetah.run(@command, :stdout => stdout)
-          stdout.string.should == "output"
+          expect(stdout.string).to eq "output"
         end
       end
 
       it "writes error output to :stderr when set to an IO" do
         StringIO.open("", "w") do |stderr|
           Cheetah.run(@command, :stderr => stderr)
-          stderr.string.should == "error"
+          expect(stderr.string).to eq "error"
         end
       end
     end
@@ -441,16 +440,16 @@ describe Cheetah do
     describe "logging" do
       it "uses the default recorder with no :recorder option" do
         logger = double
-        logger.should_receive(:info).with("Executing \"/bin/true\".")
-        logger.should_receive(:info).with("Status: 0")
+        expect(logger).to receive(:info).with("Executing \"/bin/true\".")
+        expect(logger).to receive(:info).with("Status: 0")
 
         Cheetah.run("/bin/true", :logger => logger)
       end
 
       it "uses the passed recorder with a :recorder option" do
         recorder = double
-        recorder.should_receive(:record_commands).with([["/bin/true"]])
-        recorder.should_receive(:record_status)
+        expect(recorder).to receive(:record_commands).with([["/bin/true"]])
+        expect(recorder).to receive(:record_status)
 
         Cheetah.run("/bin/true", :recorder => recorder)
       end
@@ -461,41 +460,41 @@ describe Cheetah do
         EOT
 
         recorder = double
-        recorder.should_receive(:record_commands).with([[command]])
-        recorder.should_not_receive(:record_stdin)
-        recorder.should_receive(:record_status)
+        expect(recorder).to receive(:record_commands).with([[command]])
+        expect(recorder).to_not receive(:record_stdin)
+        expect(recorder).to receive(:record_status)
 
         Cheetah.run(command, :recorder => recorder, :stdin => "")
 
         recorder = double
-        recorder.should_receive(:record_commands).with([[command]])
-        recorder.should_receive(:record_stdin).with("input")
-        recorder.should_receive(:record_status)
+        expect(recorder).to receive(:record_commands).with([[command]])
+        expect(recorder).to receive(:record_stdin).with("input")
+        expect(recorder).to receive(:record_status)
 
         Cheetah.run(command, :recorder => recorder, :stdin => "input")
       end
 
       it "records standard output" do
         recorder = double
-        recorder.should_receive(:record_commands).with([["/bin/true"]])
-        recorder.should_not_receive(:record_stdout)
-        recorder.should_receive(:record_status)
+        expect(recorder).to receive(:record_commands).with([["/bin/true"]])
+        expect(recorder).to_not receive(:record_stdout)
+        expect(recorder).to receive(:record_status)
 
         Cheetah.run("/bin/true", :recorder => recorder)
 
         recorder = double
-        recorder.should_receive(:record_commands).with([["echo", "-n", "output"]])
-        recorder.should_receive(:record_stdout).with("output")
-        recorder.should_receive(:record_status)
+        expect(recorder).to receive(:record_commands).with([["echo", "-n", "output"]])
+        expect(recorder).to receive(:record_stdout).with("output")
+        expect(recorder).to receive(:record_status)
 
         Cheetah.run("echo", "-n", "output", :recorder => recorder)
       end
 
       it "records error output" do
         recorder = double
-        recorder.should_receive(:record_commands).with([["/bin/true"]])
-        recorder.should_not_receive(:record_stderr)
-        recorder.should_receive(:record_status)
+        expect(recorder).to receive(:record_commands).with([["/bin/true"]])
+        expect(recorder).to_not receive(:record_stderr)
+        expect(recorder).to receive(:record_status)
 
         Cheetah.run("/bin/true", :recorder => recorder)
 
@@ -504,9 +503,9 @@ describe Cheetah do
         EOT
 
         recorder = double
-        recorder.should_receive(:record_commands).with([[command]])
-        recorder.should_receive(:record_stderr).with("error")
-        recorder.should_receive(:record_status)
+        expect(recorder).to receive(:record_commands).with([[command]])
+        expect(recorder).to receive(:record_stderr).with("error")
+        expect(recorder).to receive(:record_status)
 
         Cheetah.run(command, :recorder => recorder)
       end
@@ -522,7 +521,7 @@ describe Cheetah do
         Cheetah.default_options = { :stdin => "input" }
 
         begin
-          Cheetah.run("cat", :stdout => :capture).should == "input"
+          expect(Cheetah.run("cat", :stdout => :capture)).to eq "input"
         ensure
           Cheetah.default_options = saved_default_options
         end
@@ -533,7 +532,7 @@ describe Cheetah do
         Cheetah.default_options = { :stdin => "global_input" }
 
         begin
-          Cheetah.run("cat", :stdin => "passed_input", :stdout => :capture).should == "passed_input"
+          expect(Cheetah.run("cat", :stdin => "passed_input", :stdout => :capture)).to eq "passed_input"
         ensure
           Cheetah.default_options = saved_default_options
         end
@@ -543,76 +542,80 @@ describe Cheetah do
     describe "error handling" do
       describe "basics" do
         it "raises an exception when the command is not found" do
-          lambda {
+          expect {
             Cheetah.run("unknown", "foo", "bar", "baz")
-          }.should raise_error(Cheetah::ExecutionFailed) { |e|
-            e.commands.should          == [["unknown", "foo", "bar", "baz"]]
-            e.status.exitstatus.should == 127
+          }.to raise_error(Cheetah::ExecutionFailed) { |e|
+            expect(e.commands).to eq [["unknown", "foo", "bar", "baz"]]
+            expect(e.status.exitstatus).to eq 127
           }
         end
 
         it "raises an exception when the command returns non-zero status" do
-          lambda {
+          expect {
             Cheetah.run("/bin/false", "foo", "bar", "baz")
-          }.should raise_error(Cheetah::ExecutionFailed) { |e|
-            e.commands.should          == [["/bin/false", "foo", "bar", "baz"]]
-            e.status.exitstatus.should == 1
+          }.to raise_error(Cheetah::ExecutionFailed) { |e|
+            expect(e.commands).to eq [["/bin/false", "foo", "bar", "baz"]]
+            expect(e.status.exitstatus).to eq 1
           }
         end
       end
 
       describe "piped commands" do
         it "raises an exception when the last piped command fails" do
-          lambda {
+          expect {
             Cheetah.run(["/bin/true"], ["/bin/true"], ["/bin/false"])
-          }.should raise_error(Cheetah::ExecutionFailed)
+          }.to raise_error(Cheetah::ExecutionFailed)
         end
 
         it "does not raise an exception when other than last piped command fails" do
-          lambda {
+          expect {
             Cheetah.run(["/bin/true"], ["/bin/false"], ["/bin/true"])
-          }.should_not raise_error
+          }.to_not raise_error
 
-          lambda {
+          expect {
             Cheetah.run(["/bin/false"], ["/bin/true"], ["/bin/true"])
-          }.should_not raise_error
+          }.to_not raise_error
         end
       end
 
       describe "error messages" do
         it "raises an exception with a correct message for a command without arguments" do
-          lambda {
+          expect {
             Cheetah.run("/bin/false")
-          }.should raise_error(Cheetah::ExecutionFailed) { |e|
-            e.message.should ==
+          }.to raise_error(Cheetah::ExecutionFailed) { |e|
+            expect(e.message).to eq(
               "Execution of \"/bin/false\" failed with status 1 (no error output)."
+            )
           }
         end
 
         it "raises an exception with a correct message for a command with arguments" do
-          lambda {
+          expect {
             Cheetah.run("/bin/false", "foo", "bar", "baz")
-          }.should raise_error(Cheetah::ExecutionFailed) { |e|
-            e.message.should ==
+          }.to raise_error(Cheetah::ExecutionFailed) { |e|
+            expect(e.message).to eq(
               "Execution of \"/bin/false foo bar baz\" failed with status 1 (no error output)."
+            )
           }
         end
 
         it "raises an exception with a correct message for piped commands" do
-          lambda {
+          expect {
             Cheetah.run(["/bin/true"], ["/bin/true"], ["/bin/false"])
-          }.should raise_error(Cheetah::ExecutionFailed) { |e|
-            e.message.should ==
+          }.to raise_error(Cheetah::ExecutionFailed) { |e|
+            expect(e.message).to eq(
               "Execution of \"/bin/true | /bin/true | /bin/false\" failed with status 1 (no error output)."
+            )
           }
         end
 
         it "raises an exception with a correct message for commands writing no error output" do
-          lambda {
+          expect {
             Cheetah.run("/bin/false")
-          }.should raise_error(Cheetah::ExecutionFailed) { |e|
-            e.message.should ==
+          }.to raise_error(Cheetah::ExecutionFailed) { |e|
+            expect(e.message).to eq(
               "Execution of \"/bin/false\" failed with status 1 (no error output)."
+            )
           }
         end
 
@@ -622,11 +625,12 @@ describe Cheetah do
             exit 1
           EOT
 
-          lambda {
+          expect {
             Cheetah.run(command)
-          }.should raise_error(Cheetah::ExecutionFailed) { |e|
-            e.message.should ==
+          }.to raise_error(Cheetah::ExecutionFailed) { |e|
+            expect(e.message).to eq(
               "Execution of \"#{command}\" failed with status 1: one."
+            )
           }
         end
 
@@ -638,11 +642,12 @@ describe Cheetah do
             exit 1
           EOT
 
-          lambda {
+          expect {
             Cheetah.run(command)
-          }.should raise_error(Cheetah::ExecutionFailed) { |e|
-            e.message.should ==
+          }.to raise_error(Cheetah::ExecutionFailed) { |e|
+            expect(e.message).to eq(
               "Execution of \"#{command}\" failed with status 1: one (...)."
+            )
           }
         end
 
@@ -652,13 +657,14 @@ describe Cheetah do
             exit 1
           EOT
 
-          lambda {
+          expect {
             StringIO.open("", "w") do |stderr|
               Cheetah.run(command, :stderr => stderr)
             end
-          }.should raise_error(Cheetah::ExecutionFailed) { |e|
-            e.message.should ==
+          }.to raise_error(Cheetah::ExecutionFailed) { |e|
+            expect(e.message).to eq(
               "Execution of \"#{command}\" failed with status 1 (error output streamed away)."
+            )
           }
         end
 
@@ -674,40 +680,40 @@ describe Cheetah do
         end
 
         it "raises an exception with both stdout and stderr set" do
-          lambda {
+          expect {
             Cheetah.run(@command)
-          }.should raise_error(Cheetah::ExecutionFailed) { |e|
-            e.stdout.should == "output"
-            e.stderr.should == "error"
+          }.to raise_error(Cheetah::ExecutionFailed) { |e|
+            expect(e.stdout).to eq "output"
+            expect(e.stderr).to eq "error"
           }
         end
 
         it "raises an exception with stdout set to nil with :stdout set to an IO" do
-          lambda {
+          expect {
             StringIO.open("", "w") do |stdout|
               Cheetah.run(@command, :stdout => stdout)
             end
-          }.should raise_error(Cheetah::ExecutionFailed) { |e|
-            e.stdout.should be_nil
+          }.to raise_error(Cheetah::ExecutionFailed) { |e|
+            expect(e.stdout).to be_nil
           }
         end
 
         it "raises an exception with stderr set to nil with :stderr set to an IO" do
-          lambda {
+          expect {
             StringIO.open("", "w") do |stderr|
               Cheetah.run(@command, :stderr => stderr)
             end
-          }.should raise_error(Cheetah::ExecutionFailed) { |e|
-            e.stderr.should be_nil
+          }.to raise_error(Cheetah::ExecutionFailed) { |e|
+            expect(e.stderr).to be_nil
           }
         end
 
         it "handles commands that output nothing correctly" do
-          lambda {
+          expect {
             Cheetah.run("/bin/false")
-          }.should raise_error(Cheetah::ExecutionFailed) { |e|
-            e.stdout.should == ""
-            e.stderr.should == ""
+          }.to raise_error(Cheetah::ExecutionFailed) { |e|
+            expect(e.stdout).to eq ""
+            expect(e.stderr).to eq ""
           }
         end
       end
