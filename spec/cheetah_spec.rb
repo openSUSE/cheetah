@@ -336,6 +336,10 @@ describe Cheetah do
         expect(Cheetah.run("cat", :stdin => "input", :stdout => :capture)).to eq "input"
       end
 
+      it "use empty string if nil passed" do
+        expect(Cheetah.run("cat", :stdin => nil,      :stdout => :capture)).to eq ""
+      end
+
       it "reads standard input from :stdin when set to an IO" do
         StringIO.open("") do |stdin|
           expect(Cheetah.run("cat", :stdin => stdin, :stdout => :capture)).to eq ""
