@@ -5,4 +5,4 @@ RSpec::Core::RakeTask.new
 
 YARD::Rake::YardocTask.new
 
-task :default => :spec
+task default: :spec

@@ -21,7 +21,7 @@ end
 RSpec::Matchers.define :touch do |*files|
   match do |proc|
     proc.call
-    files.all? { |f| File.exists?(f) }
+    files.all? { |f| File.exist?(f) }
   end
 
   def supports_block_expectations?

@@ -1,0 +1,51 @@
+# Offense count: 4
+Metrics/AbcSize:
+  Max: 51
+
+# Offense count: 2
+Metrics/CyclomaticComplexity:
+  Max: 7
+
+# Offense count: 49
+# Configuration parameters: AllowURI, URISchemes.
+Metrics/LineLength:
+  Max: 121
+
+# Offense count: 4
+# Configuration parameters: CountComments.
+Metrics/MethodLength:
+  Max: 41
+
+# Offense count: 2
+# Configuration parameters: CountComments.
+Metrics/ModuleLength:
+  Max: 200
+
+# Offense count: 1
+Metrics/PerceivedComplexity:
+  Max: 8
+
+Style/CaseIndentation:
+  IndentWhenRelativeTo: end
+
+# do not work properly
+Style/NegatedIf:
+  Enabled: false
+
+# Offense count: 2
+# Cop supports --auto-correct.
+# Configuration parameters: EnforcedStyle, SupportedStyles.
+Style/SignalException:
+  EnforcedStyle: only_raise
+
+# Offense count: 340
+# Cop supports --auto-correct.
+# Configuration parameters: EnforcedStyle, SupportedStyles.
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+# Offense count: 5
+# Cop supports --auto-correct.
+# Configuration parameters: WordRegex.
+Style/WordArray:
+  Enabled: false
