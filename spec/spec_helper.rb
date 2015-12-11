@@ -29,3 +29,19 @@ RSpec::Matchers.define :write do |output|
     true
   end
 end
+
+if ENV["COVERAGE"]
+  require "simplecov"
+  SimpleCov.start
+
+  # use coveralls for on-line code coverage reporting at Travis CI
+  if ENV["TRAVIS"]
+    require "coveralls"
+    SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter[
+      SimpleCov::Formatter::HTMLFormatter,
+      Coveralls::SimpleCov::Formatter
+    ]
+  end
+end
+
+

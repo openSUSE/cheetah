@@ -1,5 +1,8 @@
 Cheetah
 =======
+[![Travis Build](https://travis-ci.org/openSUSE/cheetah.svg?branch=master)](https://travis-ci.org/openSUSE/cheetah)
+[![Coverage Status](https://img.shields.io/coveralls/openSUSE/cheetah.svg)](https://coveralls.io/r/openSUSE/cheetah?branch=master)
+
 
 Your swiss army knife for executing external commands in Ruby safely and
 conveniently.
