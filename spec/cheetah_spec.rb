@@ -1,4 +1,5 @@
 require "spec_helper"
+require "fileutils"
 
 module Cheetah
   describe DefaultRecorder do
