@@ -244,6 +244,13 @@ describe Cheetah do
         command = create_command("touch #@tmp_dir/touched", :name => "foo < bar > baz | qux")
         expect { Cheetah.run(command) }.to touch("#@tmp_dir/touched")
       end
+
+      it "converts params into strings" do
+        command = create_command("echo -n \"$@\" >> #@tmp_dir/args")
+        expect{
+          Cheetah.run([command, 0, 1, [10, 20]])
+        }.to write("0 1 [10, 20]").into("#@tmp_dir/args")
+      end
     end
 
     describe "running piped commands" do
