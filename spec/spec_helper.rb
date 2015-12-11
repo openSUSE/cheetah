@@ -30,7 +30,7 @@ RSpec::Matchers.define :write do |output|
   end
 end
 
-if ENV["COVERAGE"]
+if ENV["COVERAGE"] || ENV["TRAVIS"]
   require "simplecov"
   SimpleCov.start
 
