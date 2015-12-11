@@ -349,6 +349,8 @@ module Cheetah
       options = args.last.is_a?(Hash) ? args.pop : {}
       options = BUILTIN_DEFAULT_OPTIONS.merge(@default_options).merge(options)
 
+      options[:stdin] ||= "" # allow passing nil stdin see issue gh#11
+
       streamed = compute_streamed(options)
       streams  = build_streams(options, streamed)
       commands = build_commands(args)
