@@ -202,6 +202,17 @@ Cheetah.run("make", "install")
 Cheetah.default_options = {}
 ```
 
+### Changing Working Directory
+
+If diferent working directory is needed for running program, then suggested
+usage is to enclose call into `Dir.chdir` method.
+
+```ruby
+Dir.chdir("/workspace") do
+  Cheetah.run("make")
+end
+```
+
 ### More Information
 
 For more information, see the
