@@ -410,7 +410,12 @@ module Cheetah
       # The following code ensures that the result consistently (in all three
       # cases) contains an array of arrays specifying commands and their
       # arguments.
-      args.all? { |a| a.is_a?(Array) } ? args : [args]
+      pipe = args.all? { |a| a.is_a?(Array) } ? args : [args]
+      pipe.map do |argv|
+        argv.map do |arg|
+          arg.to_s
+        end
+      end
     end
 
     def build_recorder(options)
