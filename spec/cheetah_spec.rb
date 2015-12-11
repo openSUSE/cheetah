@@ -236,6 +236,13 @@ describe Cheetah do
         command = create_command("touch #{tmp_dir}/touched", name: "foo < bar > baz | qux")
         expect { Cheetah.run(command) }.to touch("#{tmp_dir}/touched")
       end
+
+      it "converts params into strings" do
+        command = create_command("echo -n \"$@\" >> #{tmp_dir}/args")
+        expect do
+          Cheetah.run([command, 0, 1, [10, 20]])
+        end.to write("0 1 [10, 20]").into("#{tmp_dir}/args")
+      end
     end
 
     describe "running piped commands" do
@@ -326,6 +333,10 @@ describe Cheetah do
       it "reads standard input from :stdin when set to a string" do
         expect(Cheetah.run("cat", stdin: "",      stdout: :capture)).to eq ""
         expect(Cheetah.run("cat", stdin: "input", stdout: :capture)).to eq "input"
+      end
+
+      it "use empty string if nil passed" do
+        expect(Cheetah.run("cat", stdin: nil, stdout: :capture)).to eq ""
       end
 
       it "reads standard input from :stdin when set to an IO" do

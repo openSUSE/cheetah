@@ -67,6 +67,9 @@ To run a command, just specify it together with its arguments:
 
 ```ruby
 Cheetah.run("tar", "xzf", "foo.tar.gz")
+
+Cheetah converts each argument to a string using `#to_s`.
+
 ```
 ### Passing Input
 
