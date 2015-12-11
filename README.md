@@ -131,6 +131,7 @@ rescue Cheetah::ExecutionFailed => e
   puts e.message
   puts "Standard output: #{e.stdout}"
   puts "Error ouptut:    #{e.stderr}"
+  puts "Exit status:     #{e.status.exitstatus}"
 end
 ```
 ### Logging
