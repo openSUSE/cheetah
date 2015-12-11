@@ -1,6 +1,7 @@
 Cheetah
 =======
 [![Travis Build](https://travis-ci.org/openSUSE/cheetah.svg?branch=master)](https://travis-ci.org/openSUSE/cheetah)
+[![Code Climate](https://codeclimate.com/github/openSUSE/cheetah/badges/gpa.svg)](https://codeclimate.com/github/openSUSE/cheetah)
 [![Coverage Status](https://img.shields.io/coveralls/openSUSE/cheetah.svg)](https://coveralls.io/r/openSUSE/cheetah?branch=master)
 
 
