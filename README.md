@@ -9,11 +9,11 @@ Examples
 
 ```ruby
 # Run a command and capture its output
-files = Cheetah.run("ls", "-la", :stdout => :capture)
+files = Cheetah.run("ls", "-la", stdout: :capture)
 
 # Run a command and capture its output into a stream
 File.open("files.txt", "w") do |stdout|
-  Cheetah.run("ls", "-la", :stdout => stdout)
+  Cheetah.run("ls", "-la", stdout: stdout)
 end
 
 # Run a command and handle errors
@@ -69,7 +69,7 @@ Cheetah.run("tar", "xzf", "foo.tar.gz")
 Using the `:stdin` option you can pass a string to command's standard input:
 
 ```ruby
-Cheetah.run("python", :stdin => source_code)
+Cheetah.run("python", stdin: source_code)
 ```
 
 If the input is big you may want to avoid passing it in one huge string. In that
@@ -78,7 +78,7 @@ input from it gradually.
 
 ```ruby
 File.open("huge_program.py") do |stdin|
-  Cheetah.run("python", :stdin => stdin)
+  Cheetah.run("python", stdin: stdin)
 end
 ```
 
@@ -88,7 +88,7 @@ To capture command's standard output, set the `:stdout` option to `:capture`.
 You will receive the output as a return value of the call:
 
 ```ruby
-files = Cheetah.run("ls", "-la", :stdout => :capture)
+files = Cheetah.run("ls", "-la", stdout: :capture)
 ```
 
 The same technique works with the error output — just use the `:stderr` option.
@@ -96,7 +96,7 @@ If you specify capturing of both outputs, the return value will be a two-element
 array:
 
 ```ruby
-results, errors = Cheetah.run("grep", "-r", "User", ".", :stdout => :capture, :stderr => :capture)
+results, errors = Cheetah.run("grep", "-r", "User", ".", stdout: => :capture, stderr: => :capture)
 ```
 
 If the output is big you may want to avoid capturing it into a huge string. In
@@ -105,7 +105,7 @@ command will write its output into it gradually.
 
 ```ruby
 File.open("files.txt", "w") do |stdout|
-  Cheetah.run("ls", "-la", :stdout => stdout)
+  Cheetah.run("ls", "-la", stdout: stdout)
 end
 ```
 
@@ -115,7 +115,7 @@ You can pipe multiple commands together and execute them as one. Just specify
 the commands together with their arguments as arrays:
 
 ```ruby
-processes = Cheetah.run(["ps", "aux"], ["grep", "ruby"], :stdout => :capture)
+processes = Cheetah.run(["ps", "aux"], ["grep", "ruby"], stdout: :capture)
 ```
 
 ### Error Handling
@@ -140,7 +140,7 @@ For debugging purposes, you can use a logger. Cheetah will log the command, its
 status, input and both outputs to it:
 
 ```ruby
-Cheetah.run("ls -l", :logger => logger)
+Cheetah.run("ls -l", logger: logger)
 ```
 
 ### Setting Defaults
@@ -165,7 +165,7 @@ For more information, see the
 Compatibility
 -------------
 
-Cheetah should run well on any Unix system with Ruby 1.9.3 or 2.0.0. Non-Unix
+Cheetah should run well on any Unix system with Ruby 1.9.3, 2.0.0, 2.1 and 2.2. Non-Unix
 systems and different Ruby implementations/versions may work too but they were
 not tested.
 
