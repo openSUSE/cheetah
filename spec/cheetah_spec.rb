@@ -3,7 +3,7 @@ require "fileutils"
 
 describe Cheetah::DefaultRecorder do
   let(:logger) { double }
-  let(:recorder) { Cheetah::DefaultRecorder.new(logger) }
+  subject(:recorder) { Cheetah::DefaultRecorder.new(logger) }
 
   describe "#record_commands" do
     it "logs execution of commands" do
