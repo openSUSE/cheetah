@@ -38,6 +38,7 @@ Features
   * Piping commands together
   * 100% secure (shell expansion is impossible by design)
   * Raises exceptions on errors (no more manual status code checks)
+  * allow specification of valid exit codes
   * Optional logging for easy debugging
 
 Non-features
@@ -127,7 +128,7 @@ processes = Cheetah.run(["ps", "aux"], ["grep", "ruby"], stdout: :capture)
 
 ### Error Handling
 
-If the command can't be executed for some reason or returns a non-zero exit
+If the command can't be executed for some reason or returns an unexpected non-zero exit
 status, Cheetah raises an exception with detailed information about the failure:
 
 ```ruby
@@ -150,6 +151,43 @@ status, input and both outputs to it:
 Cheetah.run("ls -l", logger: logger)
 ```
 
+### Expecting Non-zero Exit Status
+
+If command is expected to return valid a non-zero exit status like `grep` command
+which return `1` if given regexp is not found, then option `:allowed_exitstatus`
+can be used:
+
+```ruby
+# Run a command, handle exitstatus  and handle errors
+begin
+  exitstatus = Cheetah.run("grep", "userA", "/etc/passwd", allowed_exitstatus: 1)
+  if exitstates == 0
+    puts "found"
+  else
+    puts "not found"
+  end
+rescue Cheetah::ExecutionFailed => e
+  puts e.message
+  puts "Standard output: #{e.stdout}"
+  puts "Error output:    #{e.stderr}"
+  puts "Exit status:     #{e.status.exitstatus}"
+end
+```
+
+Exit status is returned as last element of result. If it is only captured thing,
+then it is return without array.
+Supported input for `allowed_exitstatus` are anything supporting include, fixnum
+or nil for no allowed existatus.
+
+```ruby
+# allowed inputs
+allowed_exitstatus: 1
+allowed_exitstatus: 1..5
+allowed_exitstatus: [1, 2]
+allowed_exitstatus: object_with_include_method
+allowed_exitstatus: nil
+```
+
 ### Setting Defaults
 
 To avoid repetition, you can set global default value of any option passed too
@@ -162,6 +200,17 @@ Cheetah.run("./configure")
 Cheetah.run("make")
 Cheetah.run("make", "install")
 Cheetah.default_options = {}
+```
+
+### Changing Working Directory
+
+If diferent working directory is needed for running program, then suggested
+usage is to enclose call into `Dir.chdir` method.
+
+```ruby
+Dir.chdir("/workspace") do
+  Cheetah.run("make")
+end
 ```
 
 ### More Information
