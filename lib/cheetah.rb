@@ -22,11 +22,11 @@ require File.expand_path(File.dirname(__FILE__) + "/cheetah/version")
 #   * Handling of interactive commands
 #
 # @example Run a command and capture its output
-#   files = Cheetah.run("ls", "-la", :stdout => :capture)
+#   files = Cheetah.run("ls", "-la", stdout: :capture)
 #
 # @example Run a command and capture its output into a stream
 #   File.open("files.txt", "w") do |stdout|
-#     Cheetah.run("ls", "-la", :stdout => stdout)
+#     Cheetah.run("ls", "-la", stdout: stdout)
 #   end
 #
 # @example Run a command and handle errors
@@ -138,16 +138,16 @@ module Cheetah
   class DefaultRecorder < Recorder
     # @private
     STREAM_INFO = {
-      :stdin  => { :name => "Standard input",  :method => :info  },
-      :stdout => { :name => "Standard output", :method => :info  },
-      :stderr => { :name => "Error output",    :method => :error }
+      stdin:  { name: "Standard input",  method: :info  },
+      stdout: { name: "Standard output", method: :info  },
+      stderr: { name: "Error output",    method: :error }
     }
 
     def initialize(logger)
       @logger = logger
 
-      @stream_used   = { :stdin => false, :stdout => false, :stderr => false }
-      @stream_buffer = { :stdin => "",    :stdout => "",    :stderr => "" }
+      @stream_used   = { stdin: false, stdout: false, stderr: false }
+      @stream_buffer = { stdin: "",    stdout: "",    stderr: "" }
     end
 
     def record_commands(commands)
@@ -207,10 +207,10 @@ module Cheetah
 
   # @private
   BUILTIN_DEFAULT_OPTIONS = {
-    :stdin              => "",
-    :stdout             => nil,
-    :stderr             => nil,
-    :logger             => nil
+    stdin:  "",
+    stdout: nil,
+    stderr: nil,
+    logger: nil
   }
 
   READ  = 0 # @private
@@ -225,7 +225,7 @@ module Cheetah
     # By default, no values are specified here.
     #
     # @example Setting a logger once for execution of multiple commands
-    #   Cheetah.default_options = { :logger = my_logger }
+    #   Cheetah.default_options = { logger: my_logger }
     #   Cheetah.run("./configure")
     #   Cheetah.run("make")
     #   Cheetah.run("make", "install")
@@ -325,16 +325,16 @@ module Cheetah
     #     in the first variant
     #
     #   @example
-    #     processes = Cheetah.run(["ps", "aux"], ["grep", "ruby"], :stdout => :capture)
+    #     processes = Cheetah.run(["ps", "aux"], ["grep", "ruby"], stdout: :capture)
     #
     # @raise [ExecutionFailed] when the execution fails
     #
     # @example Run a command and capture its output
-    #   files = Cheetah.run("ls", "-la", :stdout => capture)
+    #   files = Cheetah.run("ls", "-la", stdout: :capture)
     #
     # @example Run a command and capture its output into a stream
     #   File.open("files.txt", "w") do |stdout|
-    #     Cheetah.run("ls", "-la", :stdout => stdout)
+    #     Cheetah.run("ls", "-la", stdout: stdout)
     #   end
     #
     # @example Run a command and handle errors
@@ -378,17 +378,17 @@ module Cheetah
       # and nil is an IO-like object. We avoid detecting it directly to allow
       # passing StringIO, mocks, etc.
       {
-        :stdin  => !options[:stdin].is_a?(String),
-        :stdout => ![nil, :capture].include?(options[:stdout]),
-        :stderr => ![nil, :capture].include?(options[:stderr])
+        stdin:  !options[:stdin].is_a?(String),
+        stdout: ![nil, :capture].include?(options[:stdout]),
+        stderr: ![nil, :capture].include?(options[:stderr])
       }
     end
 
     def build_streams(options, streamed)
       {
-        :stdin  => streamed[:stdin]  ? options[:stdin]  : StringIO.new(options[:stdin]),
-        :stdout => streamed[:stdout] ? options[:stdout] : StringIO.new(""),
-        :stderr => streamed[:stderr] ? options[:stderr] : StringIO.new("")
+        stdin:  streamed[:stdin]  ? options[:stdin]  : StringIO.new(options[:stdin]),
+        stdout: streamed[:stdout] ? options[:stdout] : StringIO.new(""),
+        stderr: streamed[:stderr] ? options[:stderr] : StringIO.new("")
       }
     end
 
@@ -410,7 +410,8 @@ module Cheetah
       # The following code ensures that the result consistently (in all three
       # cases) contains an array of arrays specifying commands and their
       # arguments.
-      args.all? { |a| a.is_a?(Array) } ? args : [args]
+      commands = args.all? { |a| a.is_a?(Array) } ? args : [args]
+      commands.map { |c| c.map(&:to_s) }
     end
 
     def build_recorder(options)
@@ -432,9 +433,9 @@ module Cheetah
             pipe_to_child = IO.pipe
 
             fork_commands_recursive(commands[0..-2], {
-              :stdin  => pipes[:stdin],
-              :stdout => pipe_to_child,
-              :stderr => pipes[:stderr]
+              stdin:  pipes[:stdin],
+              stdout: pipe_to_child,
+              stderr: pipes[:stderr]
             })
 
             pipes[:stdin][READ].close
@@ -466,7 +467,7 @@ module Cheetah
     end
 
     def fork_commands(commands)
-      pipes = { :stdin => IO.pipe, :stdout => IO.pipe, :stderr => IO.pipe }
+      pipes = { stdin: IO.pipe, stdout: IO.pipe, stderr: IO.pipe }
 
       pid = fork_commands_recursive(commands, pipes)
 
@@ -582,4 +583,3 @@ module Cheetah
 
   self.default_options = {}
 end
-
