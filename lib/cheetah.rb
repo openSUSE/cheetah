@@ -304,6 +304,9 @@ module Cheetah
     #   @option options [Fixnum, .include?, nil] :allowed_exitstatus (nil)
     #     Allows to specify allowed exit codes that do not cause exception. It
     #     adds as last element of result exitstatus.
+    #   @option options [Hash] :env (nil)
+    #     Allows to overwrite env for running command. if key have nil value it
+    #     is deleted from env.
     #
     #   @example
     #     Cheetah.run("tar", "xzf", "foo.tar.gz")
@@ -375,6 +378,7 @@ module Cheetah
 
     def run(*args)
       options = args.last.is_a?(Hash) ? args.pop : {}
+      return changed_env(options, *args) if options[:env]
       options = BUILTIN_DEFAULT_OPTIONS.merge(@default_options).merge(options)
 
       options[:stdin] ||= "" # allow passing nil stdin see issue gh#11
@@ -403,6 +407,17 @@ module Cheetah
     end
 
     private
+
+    def changed_env(options, *args)
+      old_env = ENV.to_hash
+      options = options.dup # do not modify original options
+      env = options.delete(:env)
+      ENV.update(env)
+      args.push(options)
+      run(*args)
+    ensure
+      ENV.replace(old_env)
+    end
 
     # Parts of Cheetah.run
 

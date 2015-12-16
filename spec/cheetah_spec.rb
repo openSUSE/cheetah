@@ -757,6 +757,26 @@ describe Cheetah do
           expect(Cheetah.run("/bin/false", stdout: :capture, allowed_exitstatus: 1)).to eq(["", 1])
         end
       end
+
+      describe "changing environment" do
+        let(:command) do
+          create_command(<<-EOT)
+            echo -n $CHEETAH_TEST
+          EOT
+        end
+
+        it "runs command with given env" do
+          expect(
+            Cheetah.run(command, stdout: :capture, env: { "CHEETAH_TEST" => "OK" })
+          ).to eq "OK"
+        end
+
+        it "do not change env outside call" do
+          ENV["CHEETAH_TEST"] = "OK"
+          Cheetah.run(command, stdout: :capture, env: { "CHEETAH_TEST" => "fail" })
+          expect(ENV["CHEETAH_TEST"]).to eq "OK"
+        end
+      end
     end
   end
 end

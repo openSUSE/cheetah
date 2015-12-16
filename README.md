@@ -39,6 +39,7 @@ Features
   * 100% secure (shell expansion is impossible by design)
   * Raises exceptions on errors (no more manual status code checks)
   * allow specification of valid exit codes
+  * allow temporary overwrite of env variables
   * Optional logging for easy debugging
 
 Non-features
@@ -149,6 +150,14 @@ status, input and both outputs to it:
 
 ```ruby
 Cheetah.run("ls -l", logger: logger)
+```
+
+### Overwritting env
+
+If command need to have own specified ENV set, then passing :env option does it.
+
+```ruby
+  Cheetah.run("env", env: { "LC_ALL" => "C" })
 ```
 
 ### Expecting Non-zero Exit Status
