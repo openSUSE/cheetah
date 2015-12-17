@@ -408,15 +408,15 @@ module Cheetah
 
     private
 
+    # Parts of Cheetah.run
+
     def with_env(env, &block)
       old_env = ENV.to_hash
       ENV.update(env)
-      yield
+      block.call
     ensure
       ENV.replace(old_env)
     end
-
-    # Parts of Cheetah.run
 
     def compute_streamed(options)
       # The assumption for :stdout and :stderr is that anything except :capture
@@ -467,6 +467,20 @@ module Cheetah
       end
     end
 
+    def redirect_pipes(pipes)
+      pipes[:stdout][READ].close
+      STDOUT.reopen(pipes[:stdout][WRITE])
+      pipes[:stdout][WRITE].close
+
+      pipes[:stderr][READ].close
+      STDERR.reopen(pipes[:stderr][WRITE])
+      pipes[:stderr][WRITE].close
+
+      # All file descriptors from 3 above should be closed here, but since I
+      # don't know about any way how to detect the maximum file descriptor
+      # number portably in Ruby, I didn't implement it. Patches welcome.
+    end
+
     def fork_commands_recursive(commands, pipes, options)
       fork do
         begin
@@ -494,17 +508,7 @@ module Cheetah
             pipe_to_child[READ].close
           end
 
-          pipes[:stdout][READ].close
-          STDOUT.reopen(pipes[:stdout][WRITE])
-          pipes[:stdout][WRITE].close
-
-          pipes[:stderr][READ].close
-          STDERR.reopen(pipes[:stderr][WRITE])
-          pipes[:stderr][WRITE].close
-
-          # All file descriptors from 3 above should be closed here, but since I
-          # don't know about any way how to detect the maximum file descriptor
-          # number portably in Ruby, I didn't implement it. Patches welcome.
+          redirect_pipes(pipes)
 
           command, *args = commands.last
           with_env(options[:env]) do
