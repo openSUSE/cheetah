@@ -156,8 +156,8 @@ Cheetah.run("ls -l", logger: logger)
 
 If the command needs adapted environment variables, use the :env option.
 Passed hash is used to update existing env (for details see ENV.update).
-Nil value mean unset varible. Environment is return back to original state after
-run of a command.
+Nil value means unset variable. Environment is restored to its original state after
+running the command.
 
 ```ruby
   Cheetah.run("env", env: { "LC_ALL" => "C" })

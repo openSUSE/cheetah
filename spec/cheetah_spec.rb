@@ -779,8 +779,8 @@ describe Cheetah do
 
         it "key with nil unsets value" do
           ENV["CHEETAH_TEST"] = "OK"
-          err, exit_code = Cheetah.run(command, stderr: :capture, env: { "CHEETAH_TEST" => nil }, allowed_exitstatus: 1)
-          expect(exit_code).to eq 1
+          # different shells use different exit value, so allow all of them
+          err, _exit_code = Cheetah.run(command, stderr: :capture, env: { "CHEETAH_TEST" => nil }, allowed_exitstatus: 1..256)
           expect(err).to match(/NOT SET/)
         end
       end
