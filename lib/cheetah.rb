@@ -467,27 +467,31 @@ module Cheetah
       end
     end
 
-    def redirect_pipes(pipes)
-      pipes[:stdout][READ].close
-      STDOUT.reopen(pipes[:stdout][WRITE])
-      pipes[:stdout][WRITE].close
+    # Reopen *stream* to write **into** the writing half of *pipe*
+    # and close the reading half of *pipe*.
+    # @param pipe [Array<IO>] a pair of IOs as returned from IO.pipe
+    # @param stream [IO]
+    def into_pipe(stream, pipe)
+      stream.reopen(pipe[WRITE])
+      pipe[WRITE].close
+      pipe[READ].close
+    end
 
-      pipes[:stderr][READ].close
-      STDERR.reopen(pipes[:stderr][WRITE])
-      pipes[:stderr][WRITE].close
-
-      # All file descriptors from 3 above should be closed here, but since I
-      # don't know about any way how to detect the maximum file descriptor
-      # number portably in Ruby, I didn't implement it. Patches welcome.
+    # Reopen *stream* to read **from** the reading half of *pipe*
+    # and close the writing half of *pipe*.
+    # @param pipe [Array<IO>] a pair of IOs as returned from IO.pipe
+    # @param stream [IO]
+    def from_pipe(stream, pipe)
+      stream.reopen(pipe[READ])
+      pipe[READ].close
+      pipe[WRITE].close
     end
 
     def fork_commands_recursive(commands, pipes, options)
       fork do
         begin
           if commands.size == 1
-            pipes[:stdin][WRITE].close
-            STDIN.reopen(pipes[:stdin][READ])
-            pipes[:stdin][READ].close
+            from_pipe(STDIN, pipes[:stdin])
           else
             pipe_to_child = IO.pipe
 
@@ -503,12 +507,15 @@ module Cheetah
             pipes[:stdin][READ].close
             pipes[:stdin][WRITE].close
 
-            pipe_to_child[WRITE].close
-            STDIN.reopen(pipe_to_child[READ])
-            pipe_to_child[READ].close
+            from_pipe(STDIN, pipe_to_child)
           end
 
-          redirect_pipes(pipes)
+          into_pipe(STDOUT, pipes[:stdout])
+          into_pipe(STDERR, pipes[:stderr])
+
+          # All file descriptors from 3 above should be closed here, but since I
+          # don't know about any way how to detect the maximum file descriptor
+          # number portably in Ruby, I didn't implement it. Patches welcome.
 
           command, *args = commands.last
           with_env(options[:env]) do
