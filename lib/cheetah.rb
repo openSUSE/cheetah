@@ -393,19 +393,17 @@ module Cheetah
 
       recorder.record_commands(commands)
 
-      with_env(options[:env]) do
-        pid, pipes = fork_commands(commands)
-        select_loop(streams, pipes, recorder)
-        _pid, status = Process.wait2(pid)
+      pid, pipes = fork_commands(commands, options)
+      select_loop(streams, pipes, recorder)
+      _pid, status = Process.wait2(pid)
 
-        begin
-          check_errors(commands, status, streams, streamed, options)
-        ensure
-          recorder.record_status(status)
-        end
-
-        build_result(streams, status, options)
+      begin
+        check_errors(commands, status, streams, streamed, options)
+      ensure
+        recorder.record_status(status)
       end
+
+      build_result(streams, status, options)
     end
 
     private
@@ -469,7 +467,7 @@ module Cheetah
       end
     end
 
-    def fork_commands_recursive(commands, pipes)
+    def fork_commands_recursive(commands, pipes, options)
       fork do
         begin
           if commands.size == 1
@@ -480,9 +478,12 @@ module Cheetah
             pipe_to_child = IO.pipe
 
             fork_commands_recursive(commands[0..-2],
-                                    stdin: pipes[:stdin],
-                                    stdout: pipe_to_child,
-                                    stderr: pipes[:stderr]
+                                    {
+                                      stdin: pipes[:stdin],
+                                      stdout: pipe_to_child,
+                                      stderr: pipes[:stderr]
+                                    },
+                                    options
                                    )
 
             pipes[:stdin][READ].close
@@ -506,17 +507,19 @@ module Cheetah
           # number portably in Ruby, I didn't implement it. Patches welcome.
 
           command, *args = commands.last
-          exec([command, command], *args)
+          with_env(options[:env]) do
+            exec([command, command], *args)
+          end
         rescue SystemCallError
           exit!(127)
         end
       end
     end
 
-    def fork_commands(commands)
+    def fork_commands(commands, options)
       pipes = { stdin: IO.pipe, stdout: IO.pipe, stderr: IO.pipe }
 
-      pid = fork_commands_recursive(commands, pipes)
+      pid = fork_commands_recursive(commands, pipes, options)
 
       [
         pipes[:stdin][READ],
