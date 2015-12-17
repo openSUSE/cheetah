@@ -38,8 +38,8 @@ Features
   * Piping commands together
   * 100% secure (shell expansion is impossible by design)
   * Raises exceptions on errors (no more manual status code checks)
-  * allow specification of valid exit codes
-  * allow temporary overwrite of env variables
+    but allows to specify which non-zero codes are still a success run
+  * Allows overriding environment variables
   * Optional logging for easy debugging
 
 Non-features
@@ -152,9 +152,12 @@ status, input and both outputs to it:
 Cheetah.run("ls -l", logger: logger)
 ```
 
-### Overwritting env
+### Overwriting env
 
-If command need to have own specified ENV set, then passing :env option does it.
+If the command needs adapted environment variables, use the :env option.
+Passed hash is used to update existing env (for details see ENV.update).
+Nil value mean unset varible. Environment is return back to original state after
+run of a command.
 
 ```ruby
   Cheetah.run("env", env: { "LC_ALL" => "C" })

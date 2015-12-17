@@ -215,7 +215,8 @@ module Cheetah
     stdin:  "",
     stdout: nil,
     stderr: nil,
-    logger: nil
+    logger: nil,
+    env:    {}
   }
 
   READ  = 0 # @private
@@ -304,9 +305,9 @@ module Cheetah
     #   @option options [Fixnum, .include?, nil] :allowed_exitstatus (nil)
     #     Allows to specify allowed exit codes that do not cause exception. It
     #     adds as last element of result exitstatus.
-    #   @option options [Hash] :env (nil)
-    #     Allows to overwrite env for running command. if key have nil value it
-    #     is deleted from env.
+    #   @option options [Hash] :env ({})
+    #     Allows to update ENV for the time of running the command. if key maps to nil value it
+    #     is deleted from ENV.
     #
     #   @example
     #     Cheetah.run("tar", "xzf", "foo.tar.gz")
@@ -378,7 +379,6 @@ module Cheetah
 
     def run(*args)
       options = args.last.is_a?(Hash) ? args.pop : {}
-      return changed_env(options, *args) if options[:env]
       options = BUILTIN_DEFAULT_OPTIONS.merge(@default_options).merge(options)
 
       options[:stdin] ||= "" # allow passing nil stdin see issue gh#11
@@ -393,28 +393,27 @@ module Cheetah
 
       recorder.record_commands(commands)
 
-      pid, pipes = fork_commands(commands)
-      select_loop(streams, pipes, recorder)
-      _pid, status = Process.wait2(pid)
+      with_env(options[:env]) do
+        pid, pipes = fork_commands(commands)
+        select_loop(streams, pipes, recorder)
+        _pid, status = Process.wait2(pid)
 
-      begin
-        check_errors(commands, status, streams, streamed, options)
-      ensure
-        recorder.record_status(status)
+        begin
+          check_errors(commands, status, streams, streamed, options)
+        ensure
+          recorder.record_status(status)
+        end
+
+        build_result(streams, status, options)
       end
-
-      build_result(streams, status, options)
     end
 
     private
 
-    def changed_env(options, *args)
+    def with_env(env, &block)
       old_env = ENV.to_hash
-      options = options.dup # do not modify original options
-      env = options.delete(:env)
       ENV.update(env)
-      args.push(options)
-      run(*args)
+      yield
     ensure
       ENV.replace(old_env)
     end

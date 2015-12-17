@@ -761,7 +761,7 @@ describe Cheetah do
       describe "changing environment" do
         let(:command) do
           create_command(<<-EOT)
-            echo -n $CHEETAH_TEST
+            echo -n ${CHEETAH_TEST?"NOT SET"}
           EOT
         end
 
@@ -775,6 +775,13 @@ describe Cheetah do
           ENV["CHEETAH_TEST"] = "OK"
           Cheetah.run(command, stdout: :capture, env: { "CHEETAH_TEST" => "fail" })
           expect(ENV["CHEETAH_TEST"]).to eq "OK"
+        end
+
+        it "key with nil unsets value" do
+          ENV["CHEETAH_TEST"] = "OK"
+          err, exit_code = Cheetah.run(command, stderr: :capture, env: { "CHEETAH_TEST" => nil }, allowed_exitstatus: 1)
+          expect(exit_code).to eq 1
+          expect(err).to match(/NOT SET/)
         end
       end
     end
