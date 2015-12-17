@@ -757,6 +757,33 @@ describe Cheetah do
           expect(Cheetah.run("/bin/false", stdout: :capture, allowed_exitstatus: 1)).to eq(["", 1])
         end
       end
+
+      describe "changing environment variables" do
+        let(:command) do
+          create_command(<<-EOT)
+            echo -n ${CHEETAH_TEST-"NOT SET"}
+          EOT
+        end
+
+        it "runs command with given env" do
+          expect(
+            Cheetah.run(command, stdout: :capture, env: { "CHEETAH_TEST" => "OK" })
+          ).to eq "OK"
+        end
+
+        it "does not change ENV outside the call" do
+          ENV["CHEETAH_TEST"] = "OK"
+          Cheetah.run(command, stdout: :capture, env: { "CHEETAH_TEST" => "fail" })
+          expect(ENV["CHEETAH_TEST"]).to eq "OK"
+        end
+
+        it "unsets a variable when nil is given" do
+          ENV["CHEETAH_TEST"] = "OK"
+          expect(
+            Cheetah.run(command, stdout: :capture, env: { "CHEETAH_TEST" => nil })
+          ).to eq "NOT SET"
+        end
+      end
     end
   end
 end

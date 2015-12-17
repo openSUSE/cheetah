@@ -215,7 +215,8 @@ module Cheetah
     stdin:  "",
     stdout: nil,
     stderr: nil,
-    logger: nil
+    logger: nil,
+    env:    {}
   }
 
   READ  = 0 # @private
@@ -304,6 +305,9 @@ module Cheetah
     #   @option options [Fixnum, .include?, nil] :allowed_exitstatus (nil)
     #     Allows to specify allowed exit codes that do not cause exception. It
     #     adds as last element of result exitstatus.
+    #   @option options [Hash] :env ({})
+    #     Allows to update ENV for the time of running the command. if key maps to nil value it
+    #     is deleted from ENV.
     #
     #   @example
     #     Cheetah.run("tar", "xzf", "foo.tar.gz")
@@ -389,7 +393,7 @@ module Cheetah
 
       recorder.record_commands(commands)
 
-      pid, pipes = fork_commands(commands)
+      pid, pipes = fork_commands(commands, options)
       select_loop(streams, pipes, recorder)
       _pid, status = Process.wait2(pid)
 
@@ -405,6 +409,14 @@ module Cheetah
     private
 
     # Parts of Cheetah.run
+
+    def with_env(env, &block)
+      old_env = ENV.to_hash
+      ENV.update(env)
+      block.call
+    ensure
+      ENV.replace(old_env)
+    end
 
     def compute_streamed(options)
       # The assumption for :stdout and :stderr is that anything except :capture
@@ -455,54 +467,70 @@ module Cheetah
       end
     end
 
-    def fork_commands_recursive(commands, pipes)
+    # Reopen *stream* to write **into** the writing half of *pipe*
+    # and close the reading half of *pipe*.
+    # @param pipe [Array<IO>] a pair of IOs as returned from IO.pipe
+    # @param stream [IO]
+    def into_pipe(stream, pipe)
+      stream.reopen(pipe[WRITE])
+      pipe[WRITE].close
+      pipe[READ].close
+    end
+
+    # Reopen *stream* to read **from** the reading half of *pipe*
+    # and close the writing half of *pipe*.
+    # @param pipe [Array<IO>] a pair of IOs as returned from IO.pipe
+    # @param stream [IO]
+    def from_pipe(stream, pipe)
+      stream.reopen(pipe[READ])
+      pipe[READ].close
+      pipe[WRITE].close
+    end
+
+    def fork_commands_recursive(commands, pipes, options)
       fork do
         begin
           if commands.size == 1
-            pipes[:stdin][WRITE].close
-            STDIN.reopen(pipes[:stdin][READ])
-            pipes[:stdin][READ].close
+            from_pipe(STDIN, pipes[:stdin])
           else
             pipe_to_child = IO.pipe
 
             fork_commands_recursive(commands[0..-2],
-                                    stdin: pipes[:stdin],
-                                    stdout: pipe_to_child,
-                                    stderr: pipes[:stderr]
+                                    {
+                                      stdin: pipes[:stdin],
+                                      stdout: pipe_to_child,
+                                      stderr: pipes[:stderr]
+                                    },
+                                    options
                                    )
 
             pipes[:stdin][READ].close
             pipes[:stdin][WRITE].close
 
-            pipe_to_child[WRITE].close
-            STDIN.reopen(pipe_to_child[READ])
-            pipe_to_child[READ].close
+            from_pipe(STDIN, pipe_to_child)
           end
 
-          pipes[:stdout][READ].close
-          STDOUT.reopen(pipes[:stdout][WRITE])
-          pipes[:stdout][WRITE].close
-
-          pipes[:stderr][READ].close
-          STDERR.reopen(pipes[:stderr][WRITE])
-          pipes[:stderr][WRITE].close
+          into_pipe(STDOUT, pipes[:stdout])
+          into_pipe(STDERR, pipes[:stderr])
 
           # All file descriptors from 3 above should be closed here, but since I
           # don't know about any way how to detect the maximum file descriptor
           # number portably in Ruby, I didn't implement it. Patches welcome.
 
           command, *args = commands.last
-          exec([command, command], *args)
+          with_env(options[:env]) do
+            exec([command, command], *args)
+          end
         rescue SystemCallError
           exit!(127)
         end
       end
     end
 
-    def fork_commands(commands)
+    def fork_commands(commands, options)
       pipes = { stdin: IO.pipe, stdout: IO.pipe, stderr: IO.pipe }
 
-      pid = fork_commands_recursive(commands, pipes)
+      pid = fork_commands_recursive(commands, pipes, options)
 
       [
         pipes[:stdin][READ],
