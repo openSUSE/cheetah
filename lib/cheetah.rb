@@ -487,9 +487,25 @@ module Cheetah
       pipe[WRITE].close
     end
 
+    def chroot_step(options)
+      return options if [nil, "/"].include?(options[:chroot])
+
+      options = options.dup
+      # delete chroot option otherwise in pipe will chroot each fork recursivelly
+      root = options.delete(:chroot)
+      Dir.chroot(root)
+      # curdir can be outside chroot which is considered as security problem
+      Dir.chdir("/")
+
+      options
+    end
+
     def fork_commands_recursive(commands, pipes, options)
       fork do
         begin
+          # support chrooting
+          options = chroot_step(options)
+
           if commands.size == 1
             from_pipe(STDIN, pipes[:stdin])
           else
