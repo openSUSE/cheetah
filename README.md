@@ -38,7 +38,7 @@ Features
   * Piping commands together
   * 100% secure (shell expansion is impossible by design)
   * Raises exceptions on errors (no more manual status code checks)
-    but allows to specify which non-zero codes are still a success run
+    but allows to specify which non-zero codes are not an error
   * Thread-safety
   * Allows overriding environment variables
   * Optional logging for easy debugging

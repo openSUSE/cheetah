@@ -758,7 +758,7 @@ describe Cheetah do
         end
       end
 
-      describe "changing environment" do
+      describe "changing environment variables" do
         let(:command) do
           create_command(<<-EOT)
             echo -n ${CHEETAH_TEST-"NOT SET"}
