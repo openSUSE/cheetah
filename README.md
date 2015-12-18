@@ -42,7 +42,7 @@ Features
   * Thread-safety
   * Allows overriding environment variables
   * Optional logging for easy debugging
-  * Running on changed root ( require chroot permission )
+  * Running on changed root ( requires chroot permission )
 
 Non-features
 ------------
@@ -229,8 +229,8 @@ end
 
 ### Changing System Root
 
-If command have to be run on different system root, then :chroot options
-can be used:
+If a command needs to be executed in different system root then the `:chroot`
+option can be used:
 
 ```ruby
 Cheetah.run("/usr/bin/inspect", chroot: "/mnt/target_system")
