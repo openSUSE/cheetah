@@ -216,7 +216,8 @@ module Cheetah
     stdout: nil,
     stderr: nil,
     logger: nil,
-    env:    {}
+    env:    {},
+    chroot: "/"
   }
 
   READ  = 0 # @private
@@ -308,6 +309,8 @@ module Cheetah
     #   @option options [Hash] :env ({})
     #     Allows to update ENV for the time of running the command. if key maps to nil value it
     #     is deleted from ENV.
+    #   @option options [String] :chroot ("/")
+    #     Allows to run on different system root.
     #
     #   @example
     #     Cheetah.run("tar", "xzf", "foo.tar.gz")
@@ -538,12 +541,10 @@ module Cheetah
             exec([command, command], *args)
           end
         rescue SystemCallError => e
-          # depends when failed, if pipe is already redirected, so lets find it
-          if pipes[:stderr][WRITE].closed?
-            STDERR.puts e.message
-          else
-            pipes[:stderr][WRITE].puts e.message
-          end
+          # depends when failed, if pipe is already redirected or not, so lets find it
+          output = pipes[:stderr][WRITE].closed? ? STDERR : pipes[:stderr][WRITE]
+          output.puts e.message
+
           exit!(127)
         end
       end
