@@ -537,7 +537,13 @@ module Cheetah
           with_env(options[:env]) do
             exec([command, command], *args)
           end
-        rescue SystemCallError
+        rescue SystemCallError => e
+          # depends when failed, if pipe is already redirected, so lets find it
+          if pipes[:stderr][WRITE].closed?
+            STDERR.puts e.message
+          else
+            pipes[:stderr][WRITE].puts e.message
+          end
           exit!(127)
         end
       end
