@@ -216,7 +216,8 @@ module Cheetah
     stdout: nil,
     stderr: nil,
     logger: nil,
-    env:    {}
+    env:    {},
+    chroot: "/"
   }
 
   READ  = 0 # @private
@@ -308,6 +309,8 @@ module Cheetah
     #   @option options [Hash] :env ({})
     #     Allows to update ENV for the time of running the command. if key maps to nil value it
     #     is deleted from ENV.
+    #   @option options [String] :chroot ("/")
+    #     Allows to run on different system root.
     #
     #   @example
     #     Cheetah.run("tar", "xzf", "foo.tar.gz")
@@ -487,9 +490,25 @@ module Cheetah
       pipe[WRITE].close
     end
 
+    def chroot_step(options)
+      return options if [nil, "/"].include?(options[:chroot])
+
+      options = options.dup
+      # delete chroot option otherwise in pipe will chroot each fork recursivelly
+      root = options.delete(:chroot)
+      Dir.chroot(root)
+      # curdir can be outside chroot which is considered as security problem
+      Dir.chdir("/")
+
+      options
+    end
+
     def fork_commands_recursive(commands, pipes, options)
       fork do
         begin
+          # support chrooting
+          options = chroot_step(options)
+
           if commands.size == 1
             from_pipe(STDIN, pipes[:stdin])
           else
@@ -521,7 +540,11 @@ module Cheetah
           with_env(options[:env]) do
             exec([command, command], *args)
           end
-        rescue SystemCallError
+        rescue SystemCallError => e
+          # depends when failed, if pipe is already redirected or not, so lets find it
+          output = pipes[:stderr][WRITE].closed? ? STDERR : pipes[:stderr][WRITE]
+          output.puts e.message
+
           exit!(127)
         end
       end

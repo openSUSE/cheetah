@@ -42,6 +42,7 @@ Features
   * Thread-safety
   * Allows overriding environment variables
   * Optional logging for easy debugging
+  * Running on changed root ( requires chroot permission )
 
 Non-features
 ------------
@@ -224,6 +225,15 @@ usage is to enclose call into `Dir.chdir` method.
 Dir.chdir("/workspace") do
   Cheetah.run("make")
 end
+```
+
+### Changing System Root
+
+If a command needs to be executed in different system root then the `:chroot`
+option can be used:
+
+```ruby
+Cheetah.run("/usr/bin/inspect", chroot: "/mnt/target_system")
 ```
 
 ### More Information
