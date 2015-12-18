@@ -1,3 +1,17 @@
+0.5.0 (2015-12-18)
+------------------
+
+* Add chroot option for executing in different system root.
+* Add ENV overwrite option.
+* Allow to specify known exit codes that are not errors.
+* Document how to execute in different working directory.
+* Allow passing nil as :stdin to be same as :stdout and :strerr.
+* Convert parameters for command to strings with `.to_s`.
+* Adapt testsuite to new rspec.
+* Update documentation with various fixes.
+* Dropped support of Ruby 1.9.3.
+* Added support of Ruby 2.1 and 2.2.
+
 0.4.0 (2013-11-21)
 ------------------
 
