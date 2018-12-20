@@ -25,5 +25,5 @@ Gem::Specification.new do |s|
   s.add_dependency "abstract_method", "~> 1.2"
 
   s.add_development_dependency "rspec", "~> 3.3"
-  s.add_development_dependency "yard", "~> 0"
+  s.add_development_dependency "yard", ">= 0.9.11"
 end
