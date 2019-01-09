@@ -494,7 +494,7 @@ module Cheetah
       return options if [nil, "/"].include?(options[:chroot])
 
       options = options.dup
-      # delete chroot option otherwise in pipe will chroot each fork recursivelly
+      # delete chroot option otherwise in pipe will chroot each fork recursively
       root = options.delete(:chroot)
       Dir.chroot(root)
       # curdir can be outside chroot which is considered as security problem
