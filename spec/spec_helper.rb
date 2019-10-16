@@ -5,10 +5,10 @@ if ENV["COVERAGE"] || ENV["TRAVIS"]
   # use coveralls for on-line code coverage reporting at Travis CI
   if ENV["TRAVIS"]
     require "coveralls"
-    SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter[
+    SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter.new(
       SimpleCov::Formatter::HTMLFormatter,
       Coveralls::SimpleCov::Formatter
-    ]
+    )
   end
 end
 
