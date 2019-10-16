@@ -551,6 +551,8 @@ module Cheetah
 
     # closes all open fds starting with 3 and above
     def close_fds
+      # note: this will work only if unix has /proc filesystem. If it does not
+      # have it, it won't close other fds.
       Dir.glob("/proc/self/fd/*").each do |path|
         fd = File.basename(path).to_i
         next if (0..2).include?(fd)
