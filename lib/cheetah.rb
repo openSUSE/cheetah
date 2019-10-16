@@ -153,7 +153,7 @@ module Cheetah
       @logger = logger
 
       @stream_used   = { stdin: false, stdout: false, stderr: false }
-      @stream_buffer = { stdin: "",    stdout: "",    stderr: "" }
+      @stream_buffer = { stdin: +"", stdout: +"", stderr: +"" }
     end
 
     def record_commands(commands)
@@ -437,8 +437,8 @@ module Cheetah
     def build_streams(options, streamed)
       {
         stdin: streamed[:stdin] ? options[:stdin] : StringIO.new(options[:stdin]),
-        stdout: streamed[:stdout] ? options[:stdout] : StringIO.new(""),
-        stderr: streamed[:stderr] ? options[:stderr] : StringIO.new("")
+        stdout: streamed[:stdout] ? options[:stdout] : StringIO.new(+""),
+        stderr: streamed[:stderr] ? options[:stderr] : StringIO.new(+"")
       }
     end
 

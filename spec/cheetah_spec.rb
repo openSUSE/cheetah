@@ -428,14 +428,14 @@ describe Cheetah do
       end
 
       it "writes standard output to :stdout when set to an IO" do
-        StringIO.open("", "w") do |stdout|
+        StringIO.open(+"", "w") do |stdout|
           Cheetah.run(command, stdout: stdout)
           expect(stdout.string).to eq "output"
         end
       end
 
       it "writes error output to :stderr when set to an IO" do
-        StringIO.open("", "w") do |stderr|
+        StringIO.open(+"", "w") do |stderr|
           Cheetah.run(command, stderr: stderr)
           expect(stderr.string).to eq "error"
         end
@@ -663,7 +663,7 @@ describe Cheetah do
           SCRIPT
 
           expect do
-            StringIO.open("", "w") do |stderr|
+            StringIO.open(+"", "w") do |stderr|
               Cheetah.run(command, stderr: stderr)
             end
           end.to raise_error(Cheetah::ExecutionFailed) { |e|
@@ -694,7 +694,7 @@ describe Cheetah do
 
         it "raises an exception with stdout set to nil with :stdout set to an IO" do
           expect do
-            StringIO.open("", "w") do |stdout|
+            StringIO.open(+"", "w") do |stdout|
               Cheetah.run(command, stdout: stdout)
             end
           end.to raise_error(Cheetah::ExecutionFailed) { |e|
@@ -704,7 +704,7 @@ describe Cheetah do
 
         it "raises an exception with stderr set to nil with :stderr set to an IO" do
           expect do
-            StringIO.open("", "w") do |stderr|
+            StringIO.open(+"", "w") do |stderr|
               Cheetah.run(command, stderr: stderr)
             end
           end.to raise_error(Cheetah::ExecutionFailed) { |e|
