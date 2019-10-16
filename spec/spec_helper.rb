@@ -8,8 +8,10 @@ if ENV["COVERAGE"] || ENV["TRAVIS"]
   if ENV["TRAVIS"]
     require "coveralls"
     SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter.new(
-      SimpleCov::Formatter::HTMLFormatter,
-      Coveralls::SimpleCov::Formatter
+      [
+        SimpleCov::Formatter::HTMLFormatter,
+        Coveralls::SimpleCov::Formatter
+      ]
     )
   end
 end
