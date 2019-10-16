@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "abstract_method"
 require "logger"
 require "shellwords"
@@ -142,10 +144,10 @@ module Cheetah
   class DefaultRecorder < Recorder
     # @private
     STREAM_INFO = {
-      stdin:  { name: "Standard input",  method: :info  },
+      stdin: { name: "Standard input", method: :info },
       stdout: { name: "Standard output", method: :info  },
       stderr: { name: "Error output",    method: :error }
-    }
+    }.freeze
 
     def initialize(logger)
       @logger = logger
@@ -212,13 +214,13 @@ module Cheetah
 
   # @private
   BUILTIN_DEFAULT_OPTIONS = {
-    stdin:  "",
+    stdin: "",
     stdout: nil,
     stderr: nil,
     logger: nil,
-    env:    {},
+    env: {},
     chroot: "/"
-  }
+  }.freeze
 
   READ  = 0 # @private
   WRITE = 1 # @private
@@ -426,7 +428,7 @@ module Cheetah
       # and nil is an IO-like object. We avoid detecting it directly to allow
       # passing StringIO, mocks, etc.
       {
-        stdin:  !options[:stdin].is_a?(String),
+        stdin: !options[:stdin].is_a?(String),
         stdout: ![nil, :capture].include?(options[:stdout]),
         stderr: ![nil, :capture].include?(options[:stderr])
       }
@@ -434,7 +436,7 @@ module Cheetah
 
     def build_streams(options, streamed)
       {
-        stdin:  streamed[:stdin] ? options[:stdin] : StringIO.new(options[:stdin]),
+        stdin: streamed[:stdin] ? options[:stdin] : StringIO.new(options[:stdin]),
         stdout: streamed[:stdout] ? options[:stdout] : StringIO.new(""),
         stderr: streamed[:stderr] ? options[:stderr] : StringIO.new("")
       }
@@ -520,8 +522,7 @@ module Cheetah
                                       stdout: pipe_to_child,
                                       stderr: pipes[:stderr]
                                     },
-                                    options
-                                   )
+                                    options)
 
             pipes[:stdin][READ].close
             pipes[:stdin][WRITE].close
@@ -609,9 +610,7 @@ module Cheetah
         ios_read, ios_write, ios_error = select(pipes_readable, pipes_writable,
                                                 pipes_readable + pipes_writable)
 
-        if !ios_error.empty?
-          raise IOError, "Error when communicating with executed program."
-        end
+        raise IOError, "Error when communicating with executed program." if !ios_error.empty?
 
         ios_read.each do |pipe|
           begin

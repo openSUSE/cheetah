@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 require "fileutils"
 
@@ -12,10 +14,10 @@ describe Cheetah::DefaultRecorder do
       )
 
       recorder.record_commands([
-        ["one",   "foo", "bar", "baz"],
-        ["two",   "foo", "bar", "baz"],
-        ["three", "foo", "bar", "baz"]
-      ])
+                                 ["one", "foo", "bar", "baz"],
+                                 ["two",   "foo", "bar", "baz"],
+                                 ["three", "foo", "bar", "baz"]
+                               ])
     end
 
     it "escapes commands and their arguments" do
@@ -190,7 +192,7 @@ describe Cheetah do
         f.puts "#!/bin/sh"
         f.puts source
       end
-      FileUtils.chmod(0777, command)
+      FileUtils.chmod(0o777, command)
 
       command
     end
@@ -261,37 +263,37 @@ describe Cheetah do
       end
 
       it "runs all commands with arguments" do
-        command = create_command(<<-EOT)
+        command = create_command(<<-SCRIPT)
           cat
           echo "$@"
-        EOT
+        SCRIPT
 
         expect(Cheetah.run(
                  [command, "foo1", "bar1", "baz1"],
                  [command, "foo2", "bar2", "baz2"],
                  [command, "foo3", "bar3", "baz3"],
                  stdout: :capture
-        )).to eq "foo1 bar1 baz1\nfoo2 bar2 baz2\nfoo3 bar3 baz3\n"
+               )).to eq "foo1 bar1 baz1\nfoo2 bar2 baz2\nfoo3 bar3 baz3\n"
       end
 
       it "passes standard output of one command to the next one" do
-        command1 = create_command(<<-EOT, name: "command1")
+        command1 = create_command(<<-SCRIPT, name: "command1")
           message=message
           echo $message >> #{tmp_dir}/messages
           echo $message
-        EOT
+        SCRIPT
 
-        command2 = create_command(<<-EOT, name: "command2")
+        command2 = create_command(<<-SCRIPT, name: "command2")
           read message
           echo $message >> #{tmp_dir}/messages
           echo $message
-        EOT
+        SCRIPT
 
-        command3 = create_command(<<-EOT, name: "command3")
+        command3 = create_command(<<-SCRIPT, name: "command3")
           read message
           echo $message >> #{tmp_dir}/messages
           echo $message
-        EOT
+        SCRIPT
 
         expect do
           Cheetah.run([command1], [command2], [command3])
@@ -351,10 +353,10 @@ describe Cheetah do
 
     describe "output capturing" do
       let(:command) do
-        create_command(<<-EOT)
+        create_command(<<-SCRIPT)
           echo -n 'output'
           echo -n 'error' 1>&2
-        EOT
+        SCRIPT
       end
 
       it "does not use standard output of the parent process with no :stdin and :stderr options" do
@@ -458,9 +460,9 @@ describe Cheetah do
       end
 
       it "records standard input" do
-        command = create_command(<<-EOT)
+        command = create_command(<<-SCRIPT)
           read line || true
-        EOT
+        SCRIPT
 
         recorder = double
         expect(recorder).to receive(:record_commands).with([[command]])
@@ -501,9 +503,9 @@ describe Cheetah do
 
         Cheetah.run("/bin/true", recorder: recorder)
 
-        command = create_command(<<-EOT)
+        command = create_command(<<-SCRIPT)
           echo -n 'error' 1>&2
-        EOT
+        SCRIPT
 
         recorder = double
         expect(recorder).to receive(:record_commands).with([[command]])
@@ -623,10 +625,10 @@ describe Cheetah do
         end
 
         it "raises an exception with a correct message for commands writing one line of error output" do
-          command = create_command(<<-EOT)
+          command = create_command(<<-SCRIPT)
             echo 'one' 1>&2
             exit 1
-          EOT
+          SCRIPT
 
           expect do
             Cheetah.run(command)
@@ -638,12 +640,12 @@ describe Cheetah do
         end
 
         it "raises an exception with a correct message for commands writing more lines of error output" do
-          command = create_command(<<-EOT)
+          command = create_command(<<-SCRIPT)
             echo 'one'   1>&2
             echo 'two'   1>&2
             echo 'three' 1>&2
             exit 1
-          EOT
+          SCRIPT
 
           expect do
             Cheetah.run(command)
@@ -655,10 +657,10 @@ describe Cheetah do
         end
 
         it "raises an exception with a correct message for commands writing an error output with :stderr set to an IO" do
-          command = create_command(<<-EOT)
+          command = create_command(<<-SCRIPT)
             echo -n 'error' 1>&2
             exit 1
-          EOT
+          SCRIPT
 
           expect do
             StringIO.open("", "w") do |stderr|
@@ -674,11 +676,11 @@ describe Cheetah do
 
       describe "output capturing" do
         let(:command) do
-          create_command(<<-EOT)
+          create_command(<<-SCRIPT)
             echo -n 'output'
             echo -n 'error' 1>&2
             exit 1
-          EOT
+          SCRIPT
         end
 
         it "raises an exception with both stdout and stderr set" do
@@ -760,9 +762,9 @@ describe Cheetah do
 
       describe "changing environment variables" do
         let(:command) do
-          create_command(<<-EOT)
+          create_command(<<-SCRIPT)
             echo -n ${CHEETAH_TEST-"NOT SET"}
-          EOT
+          SCRIPT
         end
 
         it "runs command with given env" do
