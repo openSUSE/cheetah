@@ -532,9 +532,7 @@ module Cheetah
           into_pipe(STDOUT, pipes[:stdout])
           into_pipe(STDERR, pipes[:stderr])
 
-          # All file descriptors from 3 above should be closed here, but since I
-          # don't know about any way how to detect the maximum file descriptor
-          # number portably in Ruby, I didn't implement it. Patches welcome.
+          close_fds
 
           command, *args = commands.last
           with_env(options[:env]) do
@@ -546,6 +544,22 @@ module Cheetah
           output.puts e.message
 
           exit!(127)
+        end
+      end
+    end
+
+    # closes all open fds starting with 3 and above
+    def close_fds
+      Dir.glob("/proc/self/fd/*").each do |path|
+        fd = File.basename(path).to_i
+        next if (0..2).include?(fd)
+
+        begin
+          IO.new(fd).close
+        # Ruby reserves some fds for its VM and it result in this exception
+        rescue ArgumentError
+        # Ignore if close failed with invalid FD
+        rescue Errno::EBADF
         end
       end
     end
