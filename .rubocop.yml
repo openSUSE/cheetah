@@ -25,8 +25,13 @@ Metrics/ModuleLength:
 Metrics/PerceivedComplexity:
   Max: 10
 
-Style/CaseIndentation:
-  IndentWhenRelativeTo: end
+Metrics/BlockLength:
+  Max: 30
+  Exclude:
+    - "spec/**/*"
+
+Layout/CaseIndentation:
+  EnforcedStyle: end
 
 # do not work properly
 Style/NegatedIf:

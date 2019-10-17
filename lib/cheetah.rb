@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "abstract_method"
 require "logger"
 require "shellwords"
@@ -142,16 +144,16 @@ module Cheetah
   class DefaultRecorder < Recorder
     # @private
     STREAM_INFO = {
-      stdin:  { name: "Standard input",  method: :info  },
+      stdin: { name: "Standard input", method: :info },
       stdout: { name: "Standard output", method: :info  },
       stderr: { name: "Error output",    method: :error }
-    }
+    }.freeze
 
     def initialize(logger)
       @logger = logger
 
       @stream_used   = { stdin: false, stdout: false, stderr: false }
-      @stream_buffer = { stdin: "",    stdout: "",    stderr: "" }
+      @stream_buffer = { stdin: +"", stdout: +"", stderr: +"" }
     end
 
     def record_commands(commands)
@@ -212,13 +214,13 @@ module Cheetah
 
   # @private
   BUILTIN_DEFAULT_OPTIONS = {
-    stdin:  "",
+    stdin: "",
     stdout: nil,
     stderr: nil,
     logger: nil,
-    env:    {},
+    env: {},
     chroot: "/"
-  }
+  }.freeze
 
   READ  = 0 # @private
   WRITE = 1 # @private
@@ -426,7 +428,7 @@ module Cheetah
       # and nil is an IO-like object. We avoid detecting it directly to allow
       # passing StringIO, mocks, etc.
       {
-        stdin:  !options[:stdin].is_a?(String),
+        stdin: !options[:stdin].is_a?(String),
         stdout: ![nil, :capture].include?(options[:stdout]),
         stderr: ![nil, :capture].include?(options[:stderr])
       }
@@ -434,9 +436,9 @@ module Cheetah
 
     def build_streams(options, streamed)
       {
-        stdin:  streamed[:stdin] ? options[:stdin] : StringIO.new(options[:stdin]),
-        stdout: streamed[:stdout] ? options[:stdout] : StringIO.new(""),
-        stderr: streamed[:stderr] ? options[:stderr] : StringIO.new("")
+        stdin: streamed[:stdin] ? options[:stdin] : StringIO.new(options[:stdin]),
+        stdout: streamed[:stdout] ? options[:stdout] : StringIO.new(+""),
+        stderr: streamed[:stderr] ? options[:stderr] : StringIO.new(+"")
       }
     end
 
@@ -520,8 +522,7 @@ module Cheetah
                                       stdout: pipe_to_child,
                                       stderr: pipes[:stderr]
                                     },
-                                    options
-                                   )
+                                    options)
 
             pipes[:stdin][READ].close
             pipes[:stdin][WRITE].close
@@ -532,9 +533,7 @@ module Cheetah
           into_pipe(STDOUT, pipes[:stdout])
           into_pipe(STDERR, pipes[:stderr])
 
-          # All file descriptors from 3 above should be closed here, but since I
-          # don't know about any way how to detect the maximum file descriptor
-          # number portably in Ruby, I didn't implement it. Patches welcome.
+          close_fds
 
           command, *args = commands.last
           with_env(options[:env]) do
@@ -547,6 +546,27 @@ module Cheetah
 
           exit!(127)
         end
+      end
+    end
+
+    # closes all open fds starting with 3 and above
+    def close_fds
+      # note: this will work only if unix has /proc filesystem. If it does not
+      # have it, it won't close other fds.
+      Dir.glob("/proc/self/fd/*").each do |path|
+        fd = File.basename(path).to_i
+        next if (0..2).include?(fd)
+
+        # here we intentionally ignore some failures when fd close failed
+        # rubocop:disable Lint/HandleExceptions
+        begin
+          IO.new(fd).close
+        # Ruby reserves some fds for its VM and it result in this exception
+        rescue ArgumentError
+        # Ignore if close failed with invalid FD
+        rescue Errno::EBADF
+        end
+        # rubocop:enable Lint/HandleExceptions
       end
     end
 
@@ -595,9 +615,7 @@ module Cheetah
         ios_read, ios_write, ios_error = select(pipes_readable, pipes_writable,
                                                 pipes_readable + pipes_writable)
 
-        if !ios_error.empty?
-          raise IOError, "Error when communicating with executed program."
-        end
+        raise IOError, "Error when communicating with executed program." if !ios_error.empty?
 
         ios_read.each do |pipe|
           begin

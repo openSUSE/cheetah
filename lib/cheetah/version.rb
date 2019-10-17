@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Cheetah namespace
 module Cheetah
   # Cheetah version (uses [semantic versioning](http://semver.org/)).

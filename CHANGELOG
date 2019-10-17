@@ -1,3 +1,11 @@
+0.5.1 (2019-10-16)
+------------------
+
+* Implement closing open fds after call to fork (bsc#1151960). This will work
+  only in linux system with mounted /proc. For other Unixes it works as before.
+* drop support for ruby that is EOL (2.3 and lower)
+* Added support for ruby 2.4, 2.5, 2.6
+
 0.5.0 (2015-12-18)
 ------------------
 
