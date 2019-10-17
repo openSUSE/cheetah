@@ -54,7 +54,3 @@ Style/StringLiterals:
 # Configuration parameters: WordRegex.
 Style/WordArray:
   Enabled: false
-
-# we intentionally ignore some exceptions in fork as we have no way to report it back
-Lint/HandleExceptions:
-  Enabled: false

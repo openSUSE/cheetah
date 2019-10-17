@@ -557,6 +557,8 @@ module Cheetah
         fd = File.basename(path).to_i
         next if (0..2).include?(fd)
 
+        # here we intentionally ignore some failures when fd close failed
+        # rubocop:disable Lint/HandleExceptions
         begin
           IO.new(fd).close
         # Ruby reserves some fds for its VM and it result in this exception
@@ -564,6 +566,7 @@ module Cheetah
         # Ignore if close failed with invalid FD
         rescue Errno::EBADF
         end
+        # rubocop:enable Lint/HandleExceptions
       end
     end
 
