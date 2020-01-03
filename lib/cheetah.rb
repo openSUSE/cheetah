@@ -402,8 +402,12 @@ module Cheetah
       select_loop(streams, pipes, recorder)
       _pid, status = Process.wait2(pid)
 
+      # when more exit status are allowed, then redefine success as command
+      # not failed (bsc#1153749)
+      adapt_status(status, options)
+
       begin
-        check_errors(commands, status, streams, streamed, options)
+        check_errors(commands, status, streams, streamed)
       ensure
         recorder.record_status(status)
       end
@@ -412,6 +416,14 @@ module Cheetah
     end
 
     private
+
+    def adapt_status(status, options)
+      return unless allowed_exitstatus?(options)
+
+      status.define_singleton_method(:success?) do
+        options[:allowed_exitstatus].include?(exitstatus)
+      end
+    end
 
     # Parts of Cheetah.run
 
@@ -643,9 +655,8 @@ module Cheetah
       end
     end
 
-    def check_errors(commands, status, streams, streamed, options)
+    def check_errors(commands, status, streams, streamed)
       return if status.success?
-      return if options[:allowed_exitstatus].include?(status.exitstatus)
 
       stderr_part = if streamed[:stderr]
                       " (error output streamed away)"
@@ -678,8 +689,7 @@ module Cheetah
               [streams[:stdout].string, streams[:stderr].string]
             end
 
-      # do not capture only for empty array or nil converted to empty array
-      if !options[:allowed_exitstatus].is_a?(Array) || !options[:allowed_exitstatus].empty?
+      if allowed_exitstatus?(options)
         if res.nil?
           res = status.exitstatus
         else
@@ -689,6 +699,11 @@ module Cheetah
       end
 
       res
+    end
+
+    def allowed_exitstatus?(options)
+      # more exit status allowed for non array  or non empty array
+      !options[:allowed_exitstatus].is_a?(Array) || !options[:allowed_exitstatus].empty?
     end
 
     def format_commands(commands)
