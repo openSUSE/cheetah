@@ -702,7 +702,7 @@ module Cheetah
     end
 
     def allowed_exitstatus?(options)
-      # more exit status allowed for non array  or non empty array
+      # more exit status allowed for non array or non empty array
       !options[:allowed_exitstatus].is_a?(Array) || !options[:allowed_exitstatus].empty?
     end
 
