@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "spec_helper"
+require_relative "spec_helper"
 require "fileutils"
 
 describe Cheetah::DefaultRecorder do
@@ -757,6 +757,13 @@ describe Cheetah do
 
         it "appends exitstatus to end if other capturing is requested" do
           expect(Cheetah.run("/bin/false", stdout: :capture, allowed_exitstatus: 1)).to eq(["", 1])
+        end
+
+        it "does not log allowed exit status as error" do
+          logger = double(info: nil)
+          expect(logger).to_not receive(:error)
+          expect(logger).to_not receive(:warn)
+          expect(Cheetah.run("/bin/false", stdout: :capture, logger: logger, allowed_exitstatus: 1)).to eq(["", 1])
         end
       end
 
