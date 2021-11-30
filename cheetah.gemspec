@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require File.expand_path(File.dirname(__FILE__) + "/lib/cheetah/version")
+require File.expand_path("#{File.dirname(__FILE__)}/lib/cheetah/version")
 
 Gem::Specification.new do |s|
   s.name        = "cheetah"
@@ -21,6 +21,8 @@ Gem::Specification.new do |s|
     "lib/cheetah.rb",
     "lib/cheetah/version.rb"
   ]
+
+  s.required_ruby_version = ">= 2.5"
 
   s.add_dependency "abstract_method", "~> 1.2"
 

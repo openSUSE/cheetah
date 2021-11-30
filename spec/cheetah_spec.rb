@@ -316,18 +316,18 @@ describe Cheetah do
         # We just open a random file to get a file descriptor into which we can
         # save our stdin.
         saved_stdin = File.open("/dev/null", "r")
-        saved_stdin.reopen(STDIN)
+        saved_stdin.reopen($stdin)
 
         reader, writer = IO.pipe
 
         writer.write "blah"
         writer.close
 
-        STDIN.reopen(reader)
+        $stdin.reopen(reader)
         begin
           expect(Cheetah.run("cat", stdout: :capture)).to eq ""
         ensure
-          STDIN.reopen(saved_stdin)
+          $stdin.reopen(saved_stdin)
           reader.close
         end
       end
@@ -363,15 +363,15 @@ describe Cheetah do
         # We just open a random file to get a file descriptor into which we can
         # save our stdout.
         saved_stdout = File.open("/dev/null", "w")
-        saved_stdout.reopen(STDOUT)
+        saved_stdout.reopen($stdout)
 
         reader, writer = IO.pipe
 
-        STDOUT.reopen(writer)
+        $stdout.reopen(writer)
         begin
           Cheetah.run(command)
         ensure
-          STDOUT.reopen(saved_stdout)
+          $stdout.reopen(saved_stdout)
           writer.close
         end
 
@@ -383,15 +383,15 @@ describe Cheetah do
         # We just open a random file to get a file descriptor into which we can
         # save our stderr.
         saved_stderr = File.open("/dev/null", "w")
-        saved_stderr.reopen(STDERR)
+        saved_stderr.reopen($stderr)
 
         reader, writer = IO.pipe
 
-        STDERR.reopen(writer)
+        $stderr.reopen(writer)
         begin
           Cheetah.run(command)
         ensure
-          STDERR.reopen(saved_stderr)
+          $stderr.reopen(saved_stderr)
           writer.close
         end
 

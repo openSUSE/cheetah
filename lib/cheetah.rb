@@ -5,7 +5,7 @@ require "logger"
 require "shellwords"
 require "stringio"
 
-require File.expand_path(File.dirname(__FILE__) + "/cheetah/version")
+require File.expand_path("#{File.dirname(__FILE__)}/cheetah/version")
 
 # Your swiss army knife for executing external commands in Ruby safely and
 # conveniently.
@@ -150,6 +150,8 @@ module Cheetah
     }.freeze
 
     def initialize(logger)
+      super
+
       @logger = logger
 
       @stream_used   = { stdin: false, stdout: false, stderr: false }
@@ -184,7 +186,7 @@ module Cheetah
     protected
 
     def format_commands(commands)
-      '"' + commands.map { |c| Shellwords.join(c) }.join(" | ") + '"'
+      "\"#{commands.map { |c| Shellwords.join(c) }.join(' | ')}\""
     end
 
     def log_stream_increment(stream, data)
@@ -519,51 +521,49 @@ module Cheetah
 
     def fork_commands_recursive(commands, pipes, options)
       fork do
-        begin
-          # support chrooting
-          options = chroot_step(options)
+        # support chrooting
+        options = chroot_step(options)
 
-          if commands.size == 1
-            from_pipe(STDIN, pipes[:stdin])
-          else
-            pipe_to_child = IO.pipe
+        if commands.size == 1
+          from_pipe($stdin, pipes[:stdin])
+        else
+          pipe_to_child = IO.pipe
 
-            fork_commands_recursive(commands[0..-2],
-                                    {
-                                      stdin: pipes[:stdin],
-                                      stdout: pipe_to_child,
-                                      stderr: pipes[:stderr]
-                                    },
-                                    options)
+          fork_commands_recursive(commands[0..-2],
+                                  {
+                                    stdin: pipes[:stdin],
+                                    stdout: pipe_to_child,
+                                    stderr: pipes[:stderr]
+                                  },
+                                  options)
 
-            pipes[:stdin][READ].close
-            pipes[:stdin][WRITE].close
+          pipes[:stdin][READ].close
+          pipes[:stdin][WRITE].close
 
-            from_pipe(STDIN, pipe_to_child)
-          end
-
-          into_pipe(STDOUT, pipes[:stdout])
-          into_pipe(STDERR, pipes[:stderr])
-
-          close_fds
-
-          command, *args = commands.last
-          with_env(options[:env]) do
-            exec([command, command], *args)
-          end
-        rescue SystemCallError => e
-          # depends when failed, if pipe is already redirected or not, so lets find it
-          output = pipes[:stderr][WRITE].closed? ? STDERR : pipes[:stderr][WRITE]
-          output.puts e.message
-
-          exit!(127)
+          from_pipe($stdin, pipe_to_child)
         end
+
+        into_pipe($stdout, pipes[:stdout])
+        into_pipe($stderr, pipes[:stderr])
+
+        close_fds
+
+        command, *args = commands.last
+        with_env(options[:env]) do
+          exec([command, command], *args)
+        end
+      rescue SystemCallError => e
+        # depends when failed, if pipe is already redirected or not, so lets find it
+        output = pipes[:stderr][WRITE].closed? ? $stderr : pipes[:stderr][WRITE]
+        output.puts e.message
+
+        exit!(127)
       end
     end
 
     # closes all open fds starting with 3 and above
     def close_fds
-      # note: this will work only if unix has /proc filesystem. If it does not
+      # NOTE: this will work only if unix has /proc filesystem. If it does not
       # have it, it won't close other fds.
       Dir.glob("/proc/self/fd/*").each do |path|
         fd = File.basename(path).to_i
@@ -664,7 +664,7 @@ module Cheetah
                       " (no error output)"
                     else
                       lines = streams[:stderr].string.split("\n")
-                      ": " + lines.first + (lines.size > 1 ? " (...)" : "")
+                      ": #{lines.first}#{lines.size > 1 ? ' (...)' : ''}"
                     end
 
       raise ExecutionFailed.new(
@@ -707,7 +707,7 @@ module Cheetah
     end
 
     def format_commands(commands)
-      '"' + commands.map { |c| Shellwords.join(c) }.join(" | ") + '"'
+      "\"#{commands.map { |c| Shellwords.join(c) }.join(' | ')}\""
     end
   end
 
