@@ -126,19 +126,19 @@ describe Cheetah::DefaultRecorder do
     # I hate to mock Process::Status but it seems one can't create a new
     # instance of it without actually running some process, which would be
     # even worse.
-    let(:status_success) { double(success?: true,  exitstatus: 0) }
-    let(:status_failure) { double(success?: false, exitstatus: 1) }
+    let(:status_success) { double(exitstatus: 0) }
+    let(:status_failure) { double(exitstatus: 1) }
 
     it "logs a success" do
       expect(logger).to receive(:info).with("Status: 0")
 
-      recorder.record_status(status_success)
+      recorder.record_status(status_success, true)
     end
 
     it "logs a failure" do
       expect(logger).to receive(:error).with("Status: 1")
 
-      recorder.record_status(status_failure)
+      recorder.record_status(status_failure, false)
     end
 
     it "logs unlogged part of the standard input" do
@@ -146,7 +146,7 @@ describe Cheetah::DefaultRecorder do
       expect(logger).to receive(:info).with("Status: 0")
 
       recorder.record_stdin("input")
-      recorder.record_status(status_success)
+      recorder.record_status(status_success, true)
     end
 
     it "logs unlogged part of the standard output" do
@@ -154,7 +154,7 @@ describe Cheetah::DefaultRecorder do
       expect(logger).to receive(:info).with("Status: 0")
 
       recorder.record_stdout("output")
-      recorder.record_status(status_success)
+      recorder.record_status(status_success, true)
     end
 
     it "logs unlogged part of the error output" do
@@ -162,7 +162,7 @@ describe Cheetah::DefaultRecorder do
       expect(logger).to receive(:info).with("Status: 0")
 
       recorder.record_stderr("error")
-      recorder.record_status(status_success)
+      recorder.record_status(status_success, true)
     end
   end
 end

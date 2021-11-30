@@ -121,6 +121,7 @@ module Cheetah
     #
     #   @abstract
     #   @param [Process::Status] status the executed command exit status
+    #   @param [Boolean] allowed_status if exit code is in list of allowed exit codes
     abstract_method :record_status
   end
 
@@ -135,7 +136,7 @@ module Cheetah
 
     def record_stderr(_stderr);     end
 
-    def record_status(_status);     end
+    def record_status(_status, _allowed_status);     end
   end
 
   # A default recorder. It uses the `Logger::INFO` level for normal messages and
@@ -174,12 +175,12 @@ module Cheetah
       log_stream_increment(:stderr, stderr)
     end
 
-    def record_status(status)
+    def record_status(status, allowed_status)
       log_stream_remainder(:stdin)
       log_stream_remainder(:stdout)
       log_stream_remainder(:stderr)
 
-      @logger.send status.success? ? :info : :error,
+      @logger.send allowed_status ? :info : :error,
                    "Status: #{status.exitstatus}"
     end
 
@@ -404,14 +405,21 @@ module Cheetah
       select_loop(streams, pipes, recorder)
       _pid, status = Process.wait2(pid)
 
-      # when more exit status are allowed, then redefine success as command
+      # when more exit status are allowed, then pass it below that it does
       # not failed (bsc#1153749)
-      adapt_status(status, options)
+      success = allowed_status?(status, options)
 
       begin
-        check_errors(commands, status, streams, streamed)
+        if !success
+          report_errors(commands, status, streams, streamed)
+        end
       ensure
-        recorder.record_status(status)
+        # backward compatibility for recorders with just single parameter
+        if recorder.method(:record_status).arity == 1
+          recorder.record_status(status)
+        else
+          recorder.record_status(status, success)
+        end
       end
 
       build_result(streams, status, options)
@@ -419,12 +427,11 @@ module Cheetah
 
     private
 
-    def adapt_status(status, options)
-      return unless allowed_exitstatus?(options)
+    def allowed_status?(status, options)
+      exit_status = status.exitstatus
+      return exit_status == 0 unless allowed_exitstatus?(options)
 
-      status.define_singleton_method(:success?) do
-        options[:allowed_exitstatus].include?(exitstatus)
-      end
+      options[:allowed_exitstatus].include?(exit_status)
     end
 
     # Parts of Cheetah.run
@@ -655,7 +662,7 @@ module Cheetah
       end
     end
 
-    def check_errors(commands, status, streams, streamed)
+    def report_errors(commands, status, streams, streamed)
       return if status.success?
 
       stderr_part = if streamed[:stderr]
