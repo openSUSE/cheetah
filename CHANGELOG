@@ -1,3 +1,9 @@
+1.0.0 (2021-11-30)
+------------------
+
+* Add support for ruby 3.0
+  As side effect now Recorder#record_status receive additional parameter
+
 0.5.2 (2020-01-06)
 ------------------
 
