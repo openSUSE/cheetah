@@ -150,7 +150,7 @@ module Cheetah
     }.freeze
 
     def initialize(logger)
-      super
+      super()
 
       @logger = logger
 
