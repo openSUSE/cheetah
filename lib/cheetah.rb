@@ -136,7 +136,7 @@ module Cheetah
 
     def record_stderr(_stderr);     end
 
-    def record_status(_status, _allowed_status);     end
+    def record_status(_status, _allowed_status); end
   end
 
   # A default recorder. It uses the `Logger::INFO` level for normal messages and
@@ -410,9 +410,7 @@ module Cheetah
       success = allowed_status?(status, options)
 
       begin
-        if !success
-          report_errors(commands, status, streams, streamed)
-        end
+        report_errors(commands, status, streams, streamed) if !success
       ensure
         # backward compatibility for recorders with just single parameter
         if recorder.method(:record_status).arity == 1
@@ -429,7 +427,7 @@ module Cheetah
 
     def allowed_status?(status, options)
       exit_status = status.exitstatus
-      return exit_status == 0 unless allowed_exitstatus?(options)
+      return exit_status.zero? unless allowed_exitstatus?(options)
 
       options[:allowed_exitstatus].include?(exit_status)
     end
