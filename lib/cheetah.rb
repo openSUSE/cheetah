@@ -121,7 +121,7 @@ module Cheetah
     #
     #   @abstract
     #   @param [Process::Status] status the executed command exit status
-    #   @param [Boolean] allowed_status if exit code is in list of allowed exit codes
+    #   @param [Boolean] allowed_status whether the exit code is in the list of allowed exit codes
     abstract_method :record_status
   end
 
