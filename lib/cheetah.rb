@@ -5,7 +5,7 @@ require "logger"
 require "shellwords"
 require "stringio"
 
-require File.expand_path(File.dirname(__FILE__) + "/cheetah/version")
+require File.expand_path("#{File.dirname(__FILE__)}/cheetah/version")
 
 # Your swiss army knife for executing external commands in Ruby safely and
 # conveniently.
@@ -121,6 +121,7 @@ module Cheetah
     #
     #   @abstract
     #   @param [Process::Status] status the executed command exit status
+    #   @param [Boolean] allowed_status whether the exit code is in the list of allowed exit codes
     abstract_method :record_status
   end
 
@@ -135,7 +136,7 @@ module Cheetah
 
     def record_stderr(_stderr);     end
 
-    def record_status(_status);     end
+    def record_status(_status, _allowed_status); end
   end
 
   # A default recorder. It uses the `Logger::INFO` level for normal messages and
@@ -150,6 +151,8 @@ module Cheetah
     }.freeze
 
     def initialize(logger)
+      super()
+
       @logger = logger
 
       @stream_used   = { stdin: false, stdout: false, stderr: false }
@@ -172,19 +175,19 @@ module Cheetah
       log_stream_increment(:stderr, stderr)
     end
 
-    def record_status(status)
+    def record_status(status, allowed_status)
       log_stream_remainder(:stdin)
       log_stream_remainder(:stdout)
       log_stream_remainder(:stderr)
 
-      @logger.send status.success? ? :info : :error,
+      @logger.send allowed_status ? :info : :error,
                    "Status: #{status.exitstatus}"
     end
 
     protected
 
     def format_commands(commands)
-      '"' + commands.map { |c| Shellwords.join(c) }.join(" | ") + '"'
+      "\"#{commands.map { |c| Shellwords.join(c) }.join(' | ')}\""
     end
 
     def log_stream_increment(stream, data)
@@ -402,14 +405,19 @@ module Cheetah
       select_loop(streams, pipes, recorder)
       _pid, status = Process.wait2(pid)
 
-      # when more exit status are allowed, then redefine success as command
-      # not failed (bsc#1153749)
-      adapt_status(status, options)
+      # when more exit status are allowed, then pass it below that it did
+      # not fail (bsc#1153749)
+      success = allowed_status?(status, options)
 
       begin
-        check_errors(commands, status, streams, streamed)
+        report_errors(commands, status, streams, streamed) if !success
       ensure
-        recorder.record_status(status)
+        # backward compatibility for recorders with just single parameter
+        if recorder.method(:record_status).arity == 1
+          recorder.record_status(status)
+        else
+          recorder.record_status(status, success)
+        end
       end
 
       build_result(streams, status, options)
@@ -417,12 +425,11 @@ module Cheetah
 
     private
 
-    def adapt_status(status, options)
-      return unless allowed_exitstatus?(options)
+    def allowed_status?(status, options)
+      exit_status = status.exitstatus
+      return exit_status.zero? unless allowed_exitstatus?(options)
 
-      status.define_singleton_method(:success?) do
-        options[:allowed_exitstatus].include?(exitstatus)
-      end
+      options[:allowed_exitstatus].include?(exit_status)
     end
 
     # Parts of Cheetah.run
@@ -519,51 +526,49 @@ module Cheetah
 
     def fork_commands_recursive(commands, pipes, options)
       fork do
-        begin
-          # support chrooting
-          options = chroot_step(options)
+        # support chrooting
+        options = chroot_step(options)
 
-          if commands.size == 1
-            from_pipe(STDIN, pipes[:stdin])
-          else
-            pipe_to_child = IO.pipe
+        if commands.size == 1
+          from_pipe($stdin, pipes[:stdin])
+        else
+          pipe_to_child = IO.pipe
 
-            fork_commands_recursive(commands[0..-2],
-                                    {
-                                      stdin: pipes[:stdin],
-                                      stdout: pipe_to_child,
-                                      stderr: pipes[:stderr]
-                                    },
-                                    options)
+          fork_commands_recursive(commands[0..-2],
+                                  {
+                                    stdin: pipes[:stdin],
+                                    stdout: pipe_to_child,
+                                    stderr: pipes[:stderr]
+                                  },
+                                  options)
 
-            pipes[:stdin][READ].close
-            pipes[:stdin][WRITE].close
+          pipes[:stdin][READ].close
+          pipes[:stdin][WRITE].close
 
-            from_pipe(STDIN, pipe_to_child)
-          end
-
-          into_pipe(STDOUT, pipes[:stdout])
-          into_pipe(STDERR, pipes[:stderr])
-
-          close_fds
-
-          command, *args = commands.last
-          with_env(options[:env]) do
-            exec([command, command], *args)
-          end
-        rescue SystemCallError => e
-          # depends when failed, if pipe is already redirected or not, so lets find it
-          output = pipes[:stderr][WRITE].closed? ? STDERR : pipes[:stderr][WRITE]
-          output.puts e.message
-
-          exit!(127)
+          from_pipe($stdin, pipe_to_child)
         end
+
+        into_pipe($stdout, pipes[:stdout])
+        into_pipe($stderr, pipes[:stderr])
+
+        close_fds
+
+        command, *args = commands.last
+        with_env(options[:env]) do
+          exec([command, command], *args)
+        end
+      rescue SystemCallError => e
+        # depends when failed, if pipe is already redirected or not, so lets find it
+        output = pipes[:stderr][WRITE].closed? ? $stderr : pipes[:stderr][WRITE]
+        output.puts e.message
+
+        exit!(127)
       end
     end
 
     # closes all open fds starting with 3 and above
     def close_fds
-      # note: this will work only if unix has /proc filesystem. If it does not
+      # NOTE: this will work only if unix has /proc filesystem. If it does not
       # have it, it won't close other fds.
       Dir.glob("/proc/self/fd/*").each do |path|
         fd = File.basename(path).to_i
@@ -655,7 +660,7 @@ module Cheetah
       end
     end
 
-    def check_errors(commands, status, streams, streamed)
+    def report_errors(commands, status, streams, streamed)
       return if status.success?
 
       stderr_part = if streamed[:stderr]
@@ -664,7 +669,7 @@ module Cheetah
                       " (no error output)"
                     else
                       lines = streams[:stderr].string.split("\n")
-                      ": " + lines.first + (lines.size > 1 ? " (...)" : "")
+                      ": #{lines.first}#{lines.size > 1 ? ' (...)' : ''}"
                     end
 
       raise ExecutionFailed.new(
@@ -707,7 +712,7 @@ module Cheetah
     end
 
     def format_commands(commands)
-      '"' + commands.map { |c| Shellwords.join(c) }.join(" | ") + '"'
+      "\"#{commands.map { |c| Shellwords.join(c) }.join(' | ')}\""
     end
   end
 

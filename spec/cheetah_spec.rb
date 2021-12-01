@@ -126,19 +126,19 @@ describe Cheetah::DefaultRecorder do
     # I hate to mock Process::Status but it seems one can't create a new
     # instance of it without actually running some process, which would be
     # even worse.
-    let(:status_success) { double(success?: true,  exitstatus: 0) }
-    let(:status_failure) { double(success?: false, exitstatus: 1) }
+    let(:status_success) { double(exitstatus: 0) }
+    let(:status_failure) { double(exitstatus: 1) }
 
     it "logs a success" do
       expect(logger).to receive(:info).with("Status: 0")
 
-      recorder.record_status(status_success)
+      recorder.record_status(status_success, true)
     end
 
     it "logs a failure" do
       expect(logger).to receive(:error).with("Status: 1")
 
-      recorder.record_status(status_failure)
+      recorder.record_status(status_failure, false)
     end
 
     it "logs unlogged part of the standard input" do
@@ -146,7 +146,7 @@ describe Cheetah::DefaultRecorder do
       expect(logger).to receive(:info).with("Status: 0")
 
       recorder.record_stdin("input")
-      recorder.record_status(status_success)
+      recorder.record_status(status_success, true)
     end
 
     it "logs unlogged part of the standard output" do
@@ -154,7 +154,7 @@ describe Cheetah::DefaultRecorder do
       expect(logger).to receive(:info).with("Status: 0")
 
       recorder.record_stdout("output")
-      recorder.record_status(status_success)
+      recorder.record_status(status_success, true)
     end
 
     it "logs unlogged part of the error output" do
@@ -162,7 +162,7 @@ describe Cheetah::DefaultRecorder do
       expect(logger).to receive(:info).with("Status: 0")
 
       recorder.record_stderr("error")
-      recorder.record_status(status_success)
+      recorder.record_status(status_success, true)
     end
   end
 end
@@ -316,18 +316,18 @@ describe Cheetah do
         # We just open a random file to get a file descriptor into which we can
         # save our stdin.
         saved_stdin = File.open("/dev/null", "r")
-        saved_stdin.reopen(STDIN)
+        saved_stdin.reopen($stdin)
 
         reader, writer = IO.pipe
 
         writer.write "blah"
         writer.close
 
-        STDIN.reopen(reader)
+        $stdin.reopen(reader)
         begin
           expect(Cheetah.run("cat", stdout: :capture)).to eq ""
         ensure
-          STDIN.reopen(saved_stdin)
+          $stdin.reopen(saved_stdin)
           reader.close
         end
       end
@@ -363,15 +363,15 @@ describe Cheetah do
         # We just open a random file to get a file descriptor into which we can
         # save our stdout.
         saved_stdout = File.open("/dev/null", "w")
-        saved_stdout.reopen(STDOUT)
+        saved_stdout.reopen($stdout)
 
         reader, writer = IO.pipe
 
-        STDOUT.reopen(writer)
+        $stdout.reopen(writer)
         begin
           Cheetah.run(command)
         ensure
-          STDOUT.reopen(saved_stdout)
+          $stdout.reopen(saved_stdout)
           writer.close
         end
 
@@ -383,15 +383,15 @@ describe Cheetah do
         # We just open a random file to get a file descriptor into which we can
         # save our stderr.
         saved_stderr = File.open("/dev/null", "w")
-        saved_stderr.reopen(STDERR)
+        saved_stderr.reopen($stderr)
 
         reader, writer = IO.pipe
 
-        STDERR.reopen(writer)
+        $stderr.reopen(writer)
         begin
           Cheetah.run(command)
         ensure
-          STDERR.reopen(saved_stderr)
+          $stderr.reopen(saved_stderr)
           writer.close
         end
 

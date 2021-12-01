@@ -16,7 +16,7 @@ if ENV["COVERAGE"] || ENV["TRAVIS"]
   end
 end
 
-require File.expand_path(File.dirname(__FILE__) + "/../lib/cheetah")
+require File.expand_path("#{File.dirname(__FILE__)}/../lib/cheetah")
 
 RSpec.configure do |c|
   c.color = true
