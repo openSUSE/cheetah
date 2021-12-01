@@ -3,4 +3,4 @@ doc
 .rbenv-version
 Gemfile.lock
 .bundle
-.vendor
+vendor
