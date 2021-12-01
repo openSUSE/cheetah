@@ -2,3 +2,5 @@ doc
 .yardoc
 .rbenv-version
 Gemfile.lock
+.bundle
+.vendor

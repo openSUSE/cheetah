@@ -405,8 +405,8 @@ module Cheetah
       select_loop(streams, pipes, recorder)
       _pid, status = Process.wait2(pid)
 
-      # when more exit status are allowed, then pass it below that it does
-      # not failed (bsc#1153749)
+      # when more exit status are allowed, then pass it below that it did
+      # not fail (bsc#1153749)
       success = allowed_status?(status, options)
 
       begin
